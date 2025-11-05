@@ -1,8 +1,9 @@
 # Claude Buddy VS Code Extension 🤖
 
-Hackathon project created by the Patacones Unicorns (Patacorns for short): Adol Coneo, Kevin Tellez, and Haley Grassi
+Hackathon project created by the Patacones Unicorns (Patacorns for short): 
+Adol Coneo, Kevin Tellez, and Haley Grassi
 
-<img width="720" height="720" alt="image" src="https://github.com/user-attachments/assets/a5002305-adfc-4c94-8baf-94ff15c05824" />
+<img width="520" height="520" alt="image" src="https://github.com/user-attachments/assets/a5002305-adfc-4c94-8baf-94ff15c05824" />
 
 Bring Claude Buddy directly into your VS Code editor! This extension adds a friendly AI coding companion as a sidebar panel.
 
