@@ -16,16 +16,68 @@ Bring Claude Buddy directly into your VS Code editor! This extension adds a frie
 - **VS Code Integration**: Native look and feel with VS Code theming
 - **Quick Access**: Always available while coding
 
+## Building from Source 🔨
+
+### **Prerequisites**
+- **Node.js** (v16 or higher)
+- **npm** (comes with Node.js)
+- **VS Code Extension Manager (vsce)**
+
+### **Step-by-Step Build Instructions**
+
+1. **Clone the repository**
+   ```bash
+   git clone git@github.com:hgrassi-godaddy/claude-code-buddy-extension.git
+   cd claude-code-buddy-extension
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Install vsce (VS Code Extension Manager)**
+   ```bash
+   npm install -g @vscode/vsce
+   ```
+
+4. **Compile TypeScript**
+   ```bash
+   npm run compile
+   ```
+
+5. **Package into .vsix file**
+   ```bash
+   vsce package
+   ```
+
+   This creates: `claude-buddy-extension-0.0.1.vsix`
+
+### **Quick Build Script**
+```bash
+# One command to build everything
+npm run compile && vsce package
+```
+
 ## Installation 🚀
 
+### **Option 1: Install from .vsix file**
 1. **Open VS Code**
 2. **Install Extension**:
-   - Open Command Palette (`Cmd+Shift+P`)
+   - Open Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
    - Run "Extensions: Install from VSIX..."
-   - Select the `.vsix` file
+   - Select the `claude-buddy-extension-0.0.1.vsix` file
 3. **Open Claude Buddy**:
    - Look for the 🤖 icon in the Activity Bar
    - Or use Command Palette: "Claude Buddy: Open Panel"
+
+### **Option 2: Development Mode**
+1. **Open project in VS Code**
+   ```bash
+   code claude-code-buddy-extension/
+   ```
+2. **Press F5** to launch Extension Development Host
+3. **Test in the new VS Code window**
 
 ## Usage 💬
 
@@ -36,13 +88,52 @@ Bring Claude Buddy directly into your VS Code editor! This extension adds a frie
 
 ## Development 🛠️
 
-Based on the Claude Buddy web interface, this extension brings the same friendly experience directly into VS Code through the webview API.
+### **Tech Stack**
+- **TypeScript** - Main extension logic
+- **VS Code Extension API** - Integration with VS Code
+- **SVG Graphics** - Scalable anime cyborg character
+- **CSS Variables** - Dynamic theming support
+- **Webview API** - Embedded UI panel
 
-**Tech Stack:**
-- TypeScript
-- VS Code Extension API
-- Webview for UI
-- CSS with VS Code theme variables
+### **Project Structure**
+```
+claude-code-buddy-extension/
+├── src/
+│   └── extension.ts          # Main extension code
+├── media/                    # CSS and static files
+├── package.json             # Extension manifest
+├── tsconfig.json           # TypeScript config
+└── README.md               # This file
+```
+
+### **Development Workflow**
+1. **Make changes** to `src/extension.ts`
+2. **Compile**: `npm run compile`
+3. **Test**: Press F5 in VS Code (opens Extension Development Host)
+4. **Package**: `vsce package` (creates .vsix file)
+
+## Troubleshooting 🔧
+
+### **Common Issues**
+
+**"vsce: command not found"**
+```bash
+npm install -g @vscode/vsce
+```
+
+**"Cannot find module 'typescript'"**
+```bash
+npm install
+```
+
+**Extension not loading**
+- Check VS Code Developer Console: `Help` → `Toggle Developer Tools`
+- Look for error messages in Console tab
+
+**Old version still showing**
+- Uninstall previous version first: `Extensions` → `Claude Buddy` → `Uninstall`
+- Restart VS Code
+- Install new .vsix file
 
 ## Coming Soon 🚧
 

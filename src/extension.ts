@@ -112,69 +112,117 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         }
 
         .buddy-avatar {
-            width: 100px;
-            height: 120px;
+            width: 120px;
+            height: 140px;
             margin: 0 auto 12px auto;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* Robot Animations */
-        .robot-container {
+        /* Cyborg Animations */
+        .cyborg-container {
             position: relative;
-            width: 100px;
-            height: 120px;
+            width: 120px;
+            height: 140px;
         }
 
-        .robot-body {
-            animation: robotFloat 3s ease-in-out infinite;
+        .cyborg-body {
+            animation: cyborgFloat 3s ease-in-out infinite;
         }
 
-        .robot-head {
-            animation: robotBob 2s ease-in-out infinite;
+        .cyborg-head {
+            animation: cyborgBob 2.5s ease-in-out infinite;
         }
 
-        .robot-eyes {
-            animation: robotBlink 4s ease-in-out infinite;
+        .cyborg-eyes {
+            animation: cyborgBlink 4s ease-in-out infinite;
         }
 
-        .robot-antenna {
-            animation: robotAntenna 2.5s ease-in-out infinite;
+        .cyborg-hair {
+            animation: hairSway 3.5s ease-in-out infinite;
         }
 
-        @keyframes robotFloat {
+        .cyber-glow {
+            animation: cyberPulse 2s ease-in-out infinite;
+        }
+
+        .cyberpunk-mode .cyber-glow {
+            filter: drop-shadow(0 0 6px var(--cyber-color)) drop-shadow(0 0 12px var(--cyber-color));
+        }
+
+        .cyberpunk-mode .cyborg-eyes circle[fill*="#"] {
+            filter: drop-shadow(0 0 4px var(--eye-color));
+        }
+
+        @keyframes cyborgFloat {
             0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-3px); }
+            50% { transform: translateY(-4px); }
         }
 
-        @keyframes robotBob {
+        @keyframes cyborgBob {
             0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(1deg); }
-            75% { transform: rotate(-1deg); }
+            30% { transform: rotate(1deg); }
+            70% { transform: rotate(-1deg); }
         }
 
-        @keyframes robotBlink {
+        @keyframes cyborgBlink {
             0%, 90%, 100% { opacity: 1; }
-            95% { opacity: 0.3; }
+            95% { opacity: 0.2; }
         }
 
-        @keyframes robotAntenna {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(5deg); }
+        @keyframes hairSway {
+            0%, 100% { transform: translateX(0px) rotate(0deg); }
+            50% { transform: translateX(1px) rotate(1deg); }
+        }
+
+        @keyframes cyberPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Style Controls */
+        .style-controls {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+
+        .style-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 12px;
+            border: 1px solid var(--vscode-input-border);
+            background: var(--vscode-input-background);
+            color: var(--vscode-foreground);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .style-btn:hover {
+            transform: scale(1.05);
+            border-color: var(--vscode-button-background);
+        }
+
+        .style-btn.active {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border-color: var(--vscode-button-background);
         }
 
         /* Color Controls */
         .color-controls {
             display: flex;
             justify-content: center;
-            gap: 8px;
-            margin: 8px 0;
+            gap: 6px;
+            margin: 4px 0;
         }
 
         .color-btn {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             border: 2px solid var(--vscode-input-border);
             cursor: pointer;
@@ -182,12 +230,12 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         }
 
         .color-btn:hover {
-            transform: scale(1.1);
+            transform: scale(1.2);
         }
 
         .color-btn.active {
             border-color: var(--vscode-button-background);
-            box-shadow: 0 0 8px rgba(14, 99, 156, 0.5);
+            box-shadow: 0 0 6px rgba(14, 99, 156, 0.5);
         }
 
         .buddy-title {
@@ -324,53 +372,122 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         <!-- Large Buddy Section -->
         <div class="buddy-section">
             <div class="buddy-avatar">
-                <div class="robot-container">
-                    <svg width="100" height="120" viewBox="0 0 100 120" class="robot-body">
-                        <!-- Robot Body -->
-                        <rect x="25" y="60" width="50" height="45" rx="8" class="robot-main-body" fill="var(--robot-primary, #4A90E2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="2"/>
+                <div class="cyborg-container">
+                    <svg width="120" height="140" viewBox="0 0 120 140" class="cyborg-body">
+                        <defs>
+                            <linearGradient id="skinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:var(--skin-color, #F4C2A1);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:var(--skin-color, #F4C2A1);stop-opacity:0.8" />
+                            </linearGradient>
+                            <linearGradient id="jacketGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:var(--jacket-color, #34495E);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:var(--jacket-color, #34495E);stop-opacity:0.7" />
+                            </linearGradient>
+                            <linearGradient id="hairGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:var(--hair-color, #2C3E50);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:var(--hair-color, #2C3E50);stop-opacity:0.8" />
+                            </linearGradient>
+                        </defs>
 
-                        <!-- Robot Head -->
-                        <g class="robot-head">
-                            <rect x="30" y="20" width="40" height="35" rx="12" class="robot-head-body" fill="var(--robot-primary, #4A90E2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="2"/>
+                        <!-- Body Shadow -->
+                        <ellipse cx="62" cy="102" rx="24" ry="34" fill="url(#skinGradient)" opacity="0.3"/>
+
+                        <!-- Base Body -->
+                        <ellipse cx="60" cy="100" rx="24" ry="33" fill="url(#skinGradient)" stroke="var(--outline-color, #2C3E50)" stroke-width="1"/>
+
+                        <!-- Torso/Jacket -->
+                        <g id="jacket-layer">
+                            <path d="M37 84 Q37 76 46 76 L74 76 Q83 76 83 84 L83 118 Q83 122 79 122 L41 122 Q37 122 37 118 Z"
+                                  fill="url(#jacketGradient)" stroke="var(--outline-color, #2C3E50)" stroke-width="1"/>
+                            <!-- Jacket Details -->
+                            <circle cx="45" cy="86" r="1.5" fill="var(--outline-color, #2C3E50)" opacity="0.6"/>
+                            <circle cx="75" cy="86" r="1.5" fill="var(--outline-color, #2C3E50)" opacity="0.6"/>
+                            <rect x="58" y="78" width="4" height="12" rx="2" fill="var(--outline-color, #2C3E50)" opacity="0.4"/>
+                        </g>
+
+                        <!-- Head Shadow -->
+                        <ellipse cx="61" cy="46" rx="21" ry="24" fill="url(#skinGradient)" opacity="0.3"/>
+
+                        <!-- Head -->
+                        <g class="cyborg-head">
+                            <ellipse cx="60" cy="45" rx="20" ry="23" fill="url(#skinGradient)" stroke="var(--outline-color, #2C3E50)" stroke-width="1"/>
+
+                            <!-- Hair -->
+                            <g class="cyborg-hair" id="hair-layer">
+                                <path d="M40 32 Q48 18 60 20 Q72 18 80 32 Q82 36 80 40 L78 38 Q76 26 60 26 Q44 26 42 38 L40 40 Q38 36 40 32 Z"
+                                      fill="url(#hairGradient)" stroke="var(--outline-color, #2C3E50)" stroke-width="0.5"/>
+                                <!-- Hair highlights -->
+                                <path d="M50 25 Q56 22 62 25 Q68 22 72 28" fill="none" stroke="var(--hair-color, #2C3E50)" stroke-width="0.5" opacity="0.5"/>
+                            </g>
 
                             <!-- Eyes -->
-                            <g class="robot-eyes">
-                                <circle cx="38" cy="35" r="4" fill="var(--robot-accent, #E74C3C)"/>
-                                <circle cx="62" cy="35" r="4" fill="var(--robot-accent, #E74C3C)"/>
+                            <g class="cyborg-eyes">
+                                <ellipse cx="52" cy="42" rx="3.5" ry="5" fill="white"/>
+                                <ellipse cx="68" cy="42" rx="3.5" ry="5" fill="white"/>
+                                <circle cx="52" cy="42.5" r="2.2" fill="var(--eye-color, #3498DB)"/>
+                                <circle cx="68" cy="42.5" r="2.2" fill="var(--eye-color, #3498DB)"/>
+                                <circle cx="52.5" cy="41.5" r="0.8" fill="white"/>
+                                <circle cx="68.5" cy="41.5" r="0.8" fill="white"/>
+                                <!-- Eyelids -->
+                                <path d="M48.5 39 Q52 38 55.5 39" fill="none" stroke="var(--outline-color, #2C3E50)" stroke-width="0.5"/>
+                                <path d="M64.5 39 Q68 38 71.5 39" fill="none" stroke="var(--outline-color, #2C3E50)" stroke-width="0.5"/>
+                            </g>
+
+                            <!-- Nose -->
+                            <ellipse cx="60" cy="47" rx="1" ry="2" fill="var(--outline-color, #2C3E50)" opacity="0.3"/>
+
+                            <!-- Cybernetic Implants -->
+                            <g id="cyber-layer">
+                                <rect x="73" y="39" width="5" height="6" rx="1.5" fill="var(--cyber-color, #E74C3C)" class="cyber-glow"/>
+                                <line x1="75" y1="37" x2="75" y2="39" stroke="var(--cyber-color, #E74C3C)" stroke-width="0.8"/>
+                                <circle cx="75.5" cy="36" r="0.8" fill="var(--cyber-color, #E74C3C)" class="cyber-glow"/>
+                                <!-- Additional tech details -->
+                                <rect x="74" y="40.5" width="3" height="1" fill="var(--cyber-color, #E74C3C)" opacity="0.7"/>
+                                <rect x="74" y="42" width="3" height="1" fill="var(--cyber-color, #E74C3C)" opacity="0.7"/>
+                            </g>
+
+                            <!-- Glasses Layer (Hidden by default) -->
+                            <g id="glasses-layer" style="display: none;">
+                                <ellipse cx="52" cy="42" rx="6" ry="4" fill="none" stroke="var(--glasses-color, #2C3E50)" stroke-width="1.5"/>
+                                <ellipse cx="68" cy="42" rx="6" ry="4" fill="none" stroke="var(--glasses-color, #2C3E50)" stroke-width="1.5"/>
+                                <line x1="58" y1="42" x2="62" y2="42" stroke="var(--glasses-color, #2C3E50)" stroke-width="1.5"/>
+                                <!-- Nose bridge -->
+                                <line x1="46" y1="40" x2="42" y2="38" stroke="var(--glasses-color, #2C3E50)" stroke-width="1"/>
+                                <line x1="74" y1="40" x2="78" y2="38" stroke="var(--glasses-color, #2C3E50)" stroke-width="1"/>
                             </g>
 
                             <!-- Mouth -->
-                            <rect x="45" y="43" width="10" height="3" rx="1.5" fill="var(--robot-outline, #2C3E50)"/>
+                            <ellipse cx="60" cy="51" rx="2.5" ry="1.5" fill="var(--mouth-color, #D2691E)" opacity="0.8"/>
                         </g>
 
-                        <!-- Antenna -->
-                        <g class="robot-antenna">
-                            <line x1="50" y1="20" x2="50" y2="10" stroke="var(--robot-outline, #2C3E50)" stroke-width="2"/>
-                            <circle cx="50" cy="8" r="3" fill="var(--robot-accent, #E74C3C)"/>
-                        </g>
+                        <!-- Arms with gradients -->
+                        <ellipse cx="37" cy="95" rx="7" ry="18" fill="url(#skinGradient)" stroke="var(--outline-color, #2C3E50)" stroke-width="0.8"/>
+                        <ellipse cx="83" cy="95" rx="7" ry="18" fill="url(#skinGradient)" stroke="var(--outline-color, #2C3E50)" stroke-width="0.8"/>
 
-                        <!-- Arms -->
-                        <rect x="15" y="65" width="8" height="25" rx="4" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
-                        <rect x="77" y="65" width="8" height="25" rx="4" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
-
-                        <!-- Legs -->
-                        <rect x="32" y="105" width="10" height="12" rx="5" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
-                        <rect x="58" y="105" width="10" height="12" rx="5" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
-
-                        <!-- Body Details -->
-                        <circle cx="45" cy="75" r="3" fill="var(--robot-accent, #E74C3C)"/>
-                        <circle cx="55" cy="75" r="3" fill="var(--robot-accent, #E74C3C)"/>
-                        <rect x="40" y="85" width="20" height="8" rx="2" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
+                        <!-- Legs with better shape -->
+                        <ellipse cx="52" cy="130" rx="7" ry="10" fill="var(--pants-color, #2C3E50)" stroke="var(--outline-color, #2C3E50)" stroke-width="0.5"/>
+                        <ellipse cx="68" cy="130" rx="7" ry="10" fill="var(--pants-color, #2C3E50)" stroke="var(--outline-color, #2C3E50)" stroke-width="0.5"/>
                     </svg>
                 </div>
             </div>
 
+            <!-- Style Controls -->
+            <div class="style-controls">
+                <div class="style-btn active" data-style="cyberpunk">🌃 Cyber</div>
+                <div class="style-btn" data-style="academic">🎓 Academic</div>
+                <div class="style-btn" data-style="casual">👕 Casual</div>
+            </div>
+
             <!-- Color Controls -->
-            <div class="color-controls">
-                <div class="color-btn active" data-color="blue" style="background: linear-gradient(135deg, #4A90E2, #5DADE2)" title="Blue"></div>
-                <div class="color-btn" data-color="green" style="background: linear-gradient(135deg, #52C41A, #73D13D)" title="Green"></div>
-                <div class="color-btn" data-color="purple" style="background: linear-gradient(135deg, #722ED1, #9254DE)" title="Purple"></div>
-                <div class="color-btn" data-color="orange" style="background: linear-gradient(135deg, #FA8C16, #FFA940)" title="Orange"></div>
+            <div class="color-controls" style="gap: 3px; flex-wrap: wrap; max-width: 100px; margin: 4px auto;">
+                <div class="color-btn active" data-color="fair" style="background: #FDBCB4" title="Fair"></div>
+                <div class="color-btn" data-color="light" style="background: #F4C2A1" title="Light"></div>
+                <div class="color-btn" data-color="medium" style="background: #D4A574" title="Medium"></div>
+                <div class="color-btn" data-color="olive" style="background: #C19A6B" title="Olive"></div>
+                <div class="color-btn" data-color="dark" style="background: #8B4513" title="Dark"></div>
+                <div class="color-btn" data-color="deep" style="background: #654321" title="Deep"></div>
+                <div class="color-btn" data-color="silver" style="background: linear-gradient(145deg, #C0C0C0, #A8A8A8)" title="Silver"></div>
+                <div class="color-btn" data-color="purple" style="background: #8A2BE2" title="Purple"></div>
             </div>
 
             <div class="buddy-title">Claude Buddy</div>
@@ -405,40 +522,72 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
 
-        // Color themes for robot customization
-        const colorThemes = {
-            blue: {
-                primary: '#4A90E2',
-                secondary: '#5DADE2',
-                accent: '#E74C3C',
+        // Style themes for cyborg customization
+        const styleThemes = {
+            cyberpunk: {
+                jacket: '#0A0A0A',
+                hair: '#00FFFF',
+                eye: '#FF00FF',
+                cyber: '#00FF41',
+                glasses: false,
+                pants: '#1A0033',
+                jacketGlow: true,
+                outline: '#00FFFF'
+            },
+            academic: {
+                jacket: '#8B4513',
+                hair: '#654321',
+                eye: '#4A90E2',
+                cyber: '#FFD700',
+                glasses: true,
+                pants: '#2F4F4F',
+                jacketGlow: false,
                 outline: '#2C3E50'
             },
-            green: {
-                primary: '#52C41A',
-                secondary: '#73D13D',
-                accent: '#FA8C16',
-                outline: '#2C3E50'
-            },
-            purple: {
-                primary: '#722ED1',
-                secondary: '#9254DE',
-                accent: '#FA541C',
-                outline: '#2C3E50'
-            },
-            orange: {
-                primary: '#FA8C16',
-                secondary: '#FFA940',
-                accent: '#52C41A',
+            casual: {
+                jacket: '#4169E1',
+                hair: '#8B4513',
+                eye: '#228B22',
+                cyber: '#FF6347',
+                glasses: false,
+                pants: '#000080',
+                jacketGlow: false,
                 outline: '#2C3E50'
             }
         };
 
-        // Set up color changing functionality
+        // Expanded skin color options
+        const skinColors = {
+            fair: '#FDBCB4',
+            light: '#F4C2A1',
+            medium: '#D4A574',
+            olive: '#C19A6B',
+            dark: '#8B4513',
+            deep: '#654321',
+            silver: '#C0C0C0',
+            purple: '#8A2BE2'
+        };
+
+        // Set up style changing functionality
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const style = e.target.dataset.style;
+                if (style && styleThemes[style]) {
+                    changeCharacterStyle(style);
+
+                    // Update active button
+                    document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                }
+            });
+        });
+
+        // Set up skin color changing
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const color = e.target.dataset.color;
-                if (color && colorThemes[color]) {
-                    changeRobotColor(color);
+                if (color && skinColors[color]) {
+                    changeSkinColor(color);
 
                     // Update active button
                     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -447,27 +596,71 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
             });
         });
 
-        function changeRobotColor(colorName) {
-            const theme = colorThemes[colorName];
+        function changeCharacterStyle(styleName) {
+            const theme = styleThemes[styleName];
             const root = document.documentElement;
 
-            root.style.setProperty('--robot-primary', theme.primary);
-            root.style.setProperty('--robot-secondary', theme.secondary);
-            root.style.setProperty('--robot-accent', theme.accent);
-            root.style.setProperty('--robot-outline', theme.outline);
+            root.style.setProperty('--jacket-color', theme.jacket);
+            root.style.setProperty('--hair-color', theme.hair);
+            root.style.setProperty('--eye-color', theme.eye);
+            root.style.setProperty('--cyber-color', theme.cyber);
+            root.style.setProperty('--pants-color', theme.pants);
+            root.style.setProperty('--outline-color', theme.outline || '#2C3E50');
 
-            // Trigger a happy animation when color changes
-            const robotBody = document.querySelector('.robot-body');
-            if (robotBody) {
-                robotBody.style.animation = 'none';
+            // Show/hide glasses
+            const glasses = document.getElementById('glasses-layer');
+            if (glasses) {
+                glasses.style.display = theme.glasses ? 'block' : 'none';
+            }
+
+            // Apply cyberpunk glow effects
+            const jacket = document.getElementById('jacket-layer');
+            const cyborgBody = document.querySelector('.cyborg-body');
+
+            if (theme.jacketGlow && styleName === 'cyberpunk') {
+                if (jacket) jacket.style.filter = 'drop-shadow(0 0 8px ' + theme.cyber + ')';
+                if (cyborgBody) cyborgBody.classList.add('cyberpunk-mode');
+            } else {
+                if (jacket) jacket.style.filter = 'none';
+                if (cyborgBody) cyborgBody.classList.remove('cyberpunk-mode');
+            }
+
+            // Update status text based on theme
+            const status = document.querySelector('.buddy-status');
+            if (status) {
+                const statusTexts = {
+                    cyberpunk: 'System online!',
+                    academic: 'Ready to learn!',
+                    casual: 'Ready to help!'
+                };
+                status.textContent = statusTexts[styleName] || 'Ready to help!';
+            }
+
+            // Trigger animation restart
+            triggerHappyAnimation();
+        }
+
+        function changeSkinColor(colorName) {
+            const color = skinColors[colorName];
+            const root = document.documentElement;
+            root.style.setProperty('--skin-color', color);
+
+            triggerHappyAnimation();
+        }
+
+        function triggerHappyAnimation() {
+            const cyborgBody = document.querySelector('.cyborg-body');
+            if (cyborgBody) {
+                cyborgBody.style.animation = 'none';
                 setTimeout(() => {
-                    robotBody.style.animation = 'robotFloat 3s ease-in-out infinite';
+                    cyborgBody.style.animation = 'cyborgFloat 3s ease-in-out infinite';
                 }, 10);
             }
         }
 
-        // Initialize with blue theme
-        changeRobotColor('blue');
+        // Initialize with cyberpunk theme and fair skin
+        changeCharacterStyle('cyberpunk');
+        changeSkinColor('fair');
 
         // Add initial welcome message
         addMessage('Hey there! I\\'m your coding buddy! 🤖\\nReady to tackle some code together?', 'buddy');
