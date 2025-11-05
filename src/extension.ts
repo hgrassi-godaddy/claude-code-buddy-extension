@@ -112,15 +112,82 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         }
 
         .buddy-avatar {
-            width: 80px;
-            height: 80px;
-            background: var(--vscode-background);
-            border-radius: 12px;
+            width: 100px;
+            height: 120px;
+            margin: 0 auto 12px auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 12px auto;
-            font-size: 48px;
+        }
+
+        /* Robot Animations */
+        .robot-container {
+            position: relative;
+            width: 100px;
+            height: 120px;
+        }
+
+        .robot-body {
+            animation: robotFloat 3s ease-in-out infinite;
+        }
+
+        .robot-head {
+            animation: robotBob 2s ease-in-out infinite;
+        }
+
+        .robot-eyes {
+            animation: robotBlink 4s ease-in-out infinite;
+        }
+
+        .robot-antenna {
+            animation: robotAntenna 2.5s ease-in-out infinite;
+        }
+
+        @keyframes robotFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+
+        @keyframes robotBob {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(1deg); }
+            75% { transform: rotate(-1deg); }
+        }
+
+        @keyframes robotBlink {
+            0%, 90%, 100% { opacity: 1; }
+            95% { opacity: 0.3; }
+        }
+
+        @keyframes robotAntenna {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        /* Color Controls */
+        .color-controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 8px 0;
+        }
+
+        .color-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--vscode-input-border);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .color-btn.active {
+            border-color: var(--vscode-button-background);
+            box-shadow: 0 0 8px rgba(14, 99, 156, 0.5);
         }
 
         .buddy-title {
@@ -256,7 +323,56 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
     <div class="container">
         <!-- Large Buddy Section -->
         <div class="buddy-section">
-            <div class="buddy-avatar">🤖</div>
+            <div class="buddy-avatar">
+                <div class="robot-container">
+                    <svg width="100" height="120" viewBox="0 0 100 120" class="robot-body">
+                        <!-- Robot Body -->
+                        <rect x="25" y="60" width="50" height="45" rx="8" class="robot-main-body" fill="var(--robot-primary, #4A90E2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="2"/>
+
+                        <!-- Robot Head -->
+                        <g class="robot-head">
+                            <rect x="30" y="20" width="40" height="35" rx="12" class="robot-head-body" fill="var(--robot-primary, #4A90E2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="2"/>
+
+                            <!-- Eyes -->
+                            <g class="robot-eyes">
+                                <circle cx="38" cy="35" r="4" fill="var(--robot-accent, #E74C3C)"/>
+                                <circle cx="62" cy="35" r="4" fill="var(--robot-accent, #E74C3C)"/>
+                            </g>
+
+                            <!-- Mouth -->
+                            <rect x="45" y="43" width="10" height="3" rx="1.5" fill="var(--robot-outline, #2C3E50)"/>
+                        </g>
+
+                        <!-- Antenna -->
+                        <g class="robot-antenna">
+                            <line x1="50" y1="20" x2="50" y2="10" stroke="var(--robot-outline, #2C3E50)" stroke-width="2"/>
+                            <circle cx="50" cy="8" r="3" fill="var(--robot-accent, #E74C3C)"/>
+                        </g>
+
+                        <!-- Arms -->
+                        <rect x="15" y="65" width="8" height="25" rx="4" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
+                        <rect x="77" y="65" width="8" height="25" rx="4" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
+
+                        <!-- Legs -->
+                        <rect x="32" y="105" width="10" height="12" rx="5" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
+                        <rect x="58" y="105" width="10" height="12" rx="5" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
+
+                        <!-- Body Details -->
+                        <circle cx="45" cy="75" r="3" fill="var(--robot-accent, #E74C3C)"/>
+                        <circle cx="55" cy="75" r="3" fill="var(--robot-accent, #E74C3C)"/>
+                        <rect x="40" y="85" width="20" height="8" rx="2" fill="var(--robot-secondary, #5DADE2)" stroke="var(--robot-outline, #2C3E50)" stroke-width="1"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Color Controls -->
+            <div class="color-controls">
+                <div class="color-btn active" data-color="blue" style="background: linear-gradient(135deg, #4A90E2, #5DADE2)" title="Blue"></div>
+                <div class="color-btn" data-color="green" style="background: linear-gradient(135deg, #52C41A, #73D13D)" title="Green"></div>
+                <div class="color-btn" data-color="purple" style="background: linear-gradient(135deg, #722ED1, #9254DE)" title="Purple"></div>
+                <div class="color-btn" data-color="orange" style="background: linear-gradient(135deg, #FA8C16, #FFA940)" title="Orange"></div>
+            </div>
+
             <div class="buddy-title">Claude Buddy</div>
             <div class="buddy-status">Ready to help!</div>
         </div>
@@ -288,6 +404,70 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         const messagesContainer = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+
+        // Color themes for robot customization
+        const colorThemes = {
+            blue: {
+                primary: '#4A90E2',
+                secondary: '#5DADE2',
+                accent: '#E74C3C',
+                outline: '#2C3E50'
+            },
+            green: {
+                primary: '#52C41A',
+                secondary: '#73D13D',
+                accent: '#FA8C16',
+                outline: '#2C3E50'
+            },
+            purple: {
+                primary: '#722ED1',
+                secondary: '#9254DE',
+                accent: '#FA541C',
+                outline: '#2C3E50'
+            },
+            orange: {
+                primary: '#FA8C16',
+                secondary: '#FFA940',
+                accent: '#52C41A',
+                outline: '#2C3E50'
+            }
+        };
+
+        // Set up color changing functionality
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const color = e.target.dataset.color;
+                if (color && colorThemes[color]) {
+                    changeRobotColor(color);
+
+                    // Update active button
+                    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                }
+            });
+        });
+
+        function changeRobotColor(colorName) {
+            const theme = colorThemes[colorName];
+            const root = document.documentElement;
+
+            root.style.setProperty('--robot-primary', theme.primary);
+            root.style.setProperty('--robot-secondary', theme.secondary);
+            root.style.setProperty('--robot-accent', theme.accent);
+            root.style.setProperty('--robot-outline', theme.outline);
+
+            // Trigger a happy animation when color changes
+            const robotBody = document.querySelector('.robot-body');
+            if (robotBody) {
+                robotBody.style.animation = 'none';
+                setTimeout(() => {
+                    robotBody.style.animation = 'robotFloat 3s ease-in-out infinite';
+                }, 10);
+            }
+        }
+
+        // Initialize with blue theme
+        changeRobotColor('blue');
 
         // Add initial welcome message
         addMessage('Hey there! I\\'m your coding buddy! 🤖\\nReady to tackle some code together?', 'buddy');
