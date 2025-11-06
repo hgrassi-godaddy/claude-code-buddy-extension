@@ -144,7 +144,7 @@
     }
 
     // Customization functions
-    function changeCharacterStyle(styleName) {
+    function changeCharacterStyle(styleName, skipSave = false) {
         const theme = styleThemes[styleName];
         if (!theme) return;
 
@@ -231,6 +231,8 @@
 
         // Trigger animation restart
         triggerHappyAnimation();
+        
+        if (!skipSave) saveAvatarConfig();
     }
 
     function changeSkinColor(colorName) {
@@ -239,6 +241,7 @@
 
         setRootProperty('--skin-color', color);
         triggerHappyAnimation();
+        saveAvatarConfig();
     }
 
     function changeHairColor(colorName) {
@@ -247,12 +250,14 @@
 
         setRootProperty('--hair-color', color);
         triggerHappyAnimation();
+        saveAvatarConfig();
     }
 
-    function changeHairStyle(styleNumber) {
+    function changeHairStyle(styleNumber, skipSave = false) {
         hideAllElements('.hair-style');
         showElement(`hair-style-${styleNumber}`);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
     function changeEyeColor(colorName) {
@@ -261,86 +266,101 @@
 
         setRootProperty('--eye-color', color);
         triggerHappyAnimation();
+        saveAvatarConfig();
     }
 
     // Color picker functions for hex values
-    function changeSkinColorHex(hexColor) {
+    function changeSkinColorHex(hexColor, skipSave = false) {
         setRootProperty('--skin-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeHairColorHex(hexColor) {
+    function changeHairColorHex(hexColor, skipSave = false) {
         setRootProperty('--hair-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeEyeColorHex(hexColor) {
+    function changeEyeColorHex(hexColor, skipSave = false) {
         setRootProperty('--eye-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeAccessoryColorHex(hexColor) {
+    function changeAccessoryColorHex(hexColor, skipSave = false) {
         setRootProperty('--accessory-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
     // Individual accessory color functions
-    function changeGlassesColorHex(hexColor) {
+    function changeGlassesColorHex(hexColor, skipSave = false) {
         setRootProperty('--glasses-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeEarringsColorHex(hexColor) {
+    function changeEarringsColorHex(hexColor, skipSave = false) {
         setRootProperty('--earrings-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeCatColorHex(hexColor) {
+    function changeCatColorHex(hexColor, skipSave = false) {
         setRootProperty('--cat-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeDogColorHex(hexColor) {
+    function changeDogColorHex(hexColor, skipSave = false) {
         setRootProperty('--dog-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
     // Clothing color functions
-    function changeTopColorHex(hexColor) {
+    function changeTopColorHex(hexColor, skipSave = false) {
         setRootProperty('--top-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeBottomColorHex(hexColor) {
+    function changeBottomColorHex(hexColor, skipSave = false) {
         setRootProperty('--bottom-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeShoeColorHex(hexColor) {
+    function changeShoeColorHex(hexColor, skipSave = false) {
         setRootProperty('--shoe-color', hexColor);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
     // Clothing style functions
-    function changeTopStyle(styleName) {
+    function changeTopStyle(styleName, skipSave = false) {
         hideAllElements('.top-style');
         showElement(`top-${styleName}`);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeBottomStyle(styleName) {
+    function changeBottomStyle(styleName, skipSave = false) {
         hideAllElements('.bottom-style');
         showElement(`bottom-${styleName}`);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function changeShoeStyle(styleName) {
+    function changeShoeStyle(styleName, skipSave = false) {
         hideAllElements('.shoe-style');
         showElement(`shoe-${styleName}`);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
-    function toggleAccessory(accessoryName) {
+    function toggleAccessory(accessoryName, skipSave = false) {
         // Special handling for glasses with academic expression
         if (accessoryName === 'glasses') {
             const currentTheme = document.querySelector('.style-btn[data-style].active');
@@ -371,6 +391,7 @@
         }
 
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
     // Legacy function for initialization
@@ -384,10 +405,11 @@
         triggerHappyAnimation();
     }
 
-    function changeExpression(expressionName) {
+    function changeExpression(expressionName, skipSave = false) {
         hideAllElements('.expression');
         showElement(`mouth-${expressionName}`);
         triggerHappyAnimation();
+        if (!skipSave) saveAvatarConfig();
     }
 
     // Messaging functions
@@ -471,8 +493,8 @@
             btn.addEventListener('click', (e) => {
                 const style = e.target.dataset.style;
                 if (style && styleThemes[style]) {
-                    changeCharacterStyle(style);
-                    updateActiveButton('.style-btn', e.target);
+                    updateActiveButton('.style-btn', e.target); // Update button FIRST
+                    changeCharacterStyle(style); // Then apply style (which saves config)
                 }
             });
         });
@@ -493,8 +515,8 @@
             btn.addEventListener('click', (e) => {
                 const style = e.target.dataset.hairStyle;
                 if (style) {
-                    changeHairStyle(style);
                     updateActiveButton('[data-hair-style]', e.target);
+                    changeHairStyle(style);
                 }
             });
         });
@@ -537,8 +559,8 @@
             btn.addEventListener('click', (e) => {
                 const expression = e.target.dataset.expression;
                 if (expression) {
-                    changeExpression(expression);
                     updateActiveButton('[data-expression]', e.target);
+                    changeExpression(expression);
                 }
             });
         });
@@ -548,8 +570,8 @@
             btn.addEventListener('click', (e) => {
                 const top = e.target.dataset.top;
                 if (top) {
-                    changeTopStyle(top);
                     updateActiveButton('[data-top]', e.target);
+                    changeTopStyle(top);
                 }
             });
         });
@@ -559,8 +581,8 @@
             btn.addEventListener('click', (e) => {
                 const bottom = e.target.dataset.bottom;
                 if (bottom) {
-                    changeBottomStyle(bottom);
                     updateActiveButton('[data-bottom]', e.target);
+                    changeBottomStyle(bottom);
                 }
             });
         });
@@ -570,8 +592,8 @@
             btn.addEventListener('click', (e) => {
                 const shoe = e.target.dataset.shoe;
                 if (shoe) {
-                    changeShoeStyle(shoe);
                     updateActiveButton('[data-shoe]', e.target);
+                    changeShoeStyle(shoe);
                 }
             });
         });
@@ -646,6 +668,7 @@
 
     function handleExtensionMessage(event) {
         const message = event.data;
+        console.log('[Webview] Received message:', message.command);
         switch (message.command) {
             case 'receiveMessage':
                 addMessage(message.message, 'buddy');
@@ -667,6 +690,11 @@
                 message.prompts.forEach(prompt => {
                     addMessage(prompt.text, 'user');
                 });
+                break;
+            case 'loadAvatarConfig':
+                // Load saved avatar configuration
+                console.log('[Webview] loadAvatarConfig received, config:', message.config);
+                loadAvatarConfig(message.config);
                 break;
         }
     }
@@ -691,31 +719,194 @@
         }
     }
 
-    // Initialize default customization
+    // Initialize default customization (without saving)
     function initializeCustomization() {
         // Initialize with cyberpunk theme, color picker defaults, modern hair style
-        changeCharacterStyle('cyberpunk');
+        // Use skipSave=true to prevent saving defaults before loading saved config
+        changeCharacterStyle('cyberpunk', true);
 
         // Set initial colors to match color picker defaults
-        changeSkinColorHex('#C0C0C0');  // Silver/gray default
-        changeHairStyle('4'); // Clean Cut style
-        changeHairColorHex('#8B4513');  // Brown hair default
-        changeEyeColorHex('#ec4899');   // Pink eyes as requested
-        changeAccessoryColorHex('#E74C3C');  // Red accessory default
+        changeSkinColorHex('#C0C0C0', true);  // Silver/gray default
+        changeHairStyle('4', true); // Clean Cut style
+        changeHairColorHex('#8B4513', true);  // Brown hair default
+        changeEyeColorHex('#ec4899', true);   // Pink eyes as requested
+        changeAccessoryColorHex('#E74C3C', true);  // Red accessory default
 
         // Initialize individual accessory colors to match color picker defaults
-        changeGlassesColorHex('#E74C3C');    // Red glasses
-        changeEarringsColorHex('#FFD700');   // Gold earrings
-        changeCatColorHex('#FF8C42');        // Orange cat
-        changeDogColorHex('#8B4513');        // Brown dog
+        changeGlassesColorHex('#E74C3C', true);    // Red glasses
+        changeEarringsColorHex('#FFD700', true);   // Gold earrings
+        changeCatColorHex('#FF8C42', true);        // Orange cat
+        changeDogColorHex('#8B4513', true);        // Brown dog
 
         // Initialize clothing colors to match color picker defaults
-        changeTopColorHex('#3498DB');    // Blue tank top
-        changeBottomColorHex('#2C3E50'); // Dark blue pants
-        changeShoeColorHex('#1A1A1A');   // Black dress shoes
+        changeTopColorHex('#3498DB', true);    // Blue tank top
+        changeBottomColorHex('#2C3E50', true); // Dark blue pants
+        changeShoeColorHex('#1A1A1A', true);   // Black dress shoes
 
         changeAccessory('none');
-        changeExpression('neutral');
+        changeExpression('neutral', true);
+    }
+
+    // LocalStorage functions for avatar configuration
+    function getAvatarConfig() {
+        const config = {
+            style: document.querySelector('.style-btn.active')?.dataset.style || 'cyberpunk',
+            skinColor: getComputedStyle(document.documentElement).getPropertyValue('--skin-color').trim(),
+            hairStyle: [...document.querySelectorAll('.hair-style')].find(el => el.classList.contains('active'))?.id.replace('hair-style-', '') || '4',
+            hairColor: getComputedStyle(document.documentElement).getPropertyValue('--hair-color').trim(),
+            eyeColor: getComputedStyle(document.documentElement).getPropertyValue('--eye-color').trim(),
+            topStyle: [...document.querySelectorAll('.top-style')].find(el => el.classList.contains('active'))?.id.replace('top-', '') || 'tank',
+            topColor: getComputedStyle(document.documentElement).getPropertyValue('--top-color').trim(),
+            bottomStyle: [...document.querySelectorAll('.bottom-style')].find(el => el.classList.contains('active'))?.id.replace('bottom-', '') || 'jeans',
+            bottomColor: getComputedStyle(document.documentElement).getPropertyValue('--bottom-color').trim(),
+            shoeStyle: [...document.querySelectorAll('.shoe-style')].find(el => el.classList.contains('active'))?.id.replace('shoe-', '') || 'sneakers',
+            shoeColor: getComputedStyle(document.documentElement).getPropertyValue('--shoe-color').trim(),
+            expression: [...document.querySelectorAll('.expression')].find(el => el.classList.contains('active'))?.id.replace('mouth-', '') || 'neutral',
+            accessories: {
+                glasses: document.getElementById('accessory-glasses')?.classList.contains('active') || false,
+                glassesColor: getComputedStyle(document.documentElement).getPropertyValue('--glasses-color').trim(),
+                earrings: document.getElementById('accessory-earrings')?.classList.contains('active') || false,
+                earringsColor: getComputedStyle(document.documentElement).getPropertyValue('--earrings-color').trim(),
+                cat: document.getElementById('accessory-cat')?.classList.contains('active') || false,
+                catColor: getComputedStyle(document.documentElement).getPropertyValue('--cat-color').trim(),
+                dog: document.getElementById('accessory-dog')?.classList.contains('active') || false,
+                dogColor: getComputedStyle(document.documentElement).getPropertyValue('--dog-color').trim()
+            }
+        };
+        return config;
+    }
+
+    function saveAvatarConfig() {
+        const config = getAvatarConfig();
+        vscode.postMessage({
+            command: 'saveAvatarConfig',
+            config: config
+        });
+        console.log('Avatar config sent to extension for saving:', config);
+    }
+
+    function loadAvatarConfig(config) {
+        if (!config) {
+            console.log('No config provided to load');
+            return false;
+        }
+
+        console.log('Loading avatar config:', config);
+
+        // Apply style theme first (this also updates some color pickers)
+        if (config.style) {
+            changeCharacterStyle(config.style, true);
+            const styleBtn = document.querySelector(`[data-style="${config.style}"]`);
+            if (styleBtn) updateActiveButton('.style-btn', styleBtn);
+        }
+
+        // Apply colors and update color pickers
+        if (config.skinColor) {
+            changeSkinColorHex(config.skinColor, true);
+            const skinPicker = document.getElementById('skinColorPicker');
+            if (skinPicker) skinPicker.value = config.skinColor;
+        }
+        if (config.hairColor) {
+            changeHairColorHex(config.hairColor, true);
+            const hairPicker = document.getElementById('hairColorPicker');
+            if (hairPicker) hairPicker.value = config.hairColor;
+        }
+        if (config.eyeColor) {
+            changeEyeColorHex(config.eyeColor, true);
+            const eyePicker = document.getElementById('eyeColorPicker');
+            if (eyePicker) eyePicker.value = config.eyeColor;
+        }
+        if (config.topColor) {
+            changeTopColorHex(config.topColor, true);
+            const topPicker = document.getElementById('topColorPicker');
+            if (topPicker) topPicker.value = config.topColor;
+        }
+        if (config.bottomColor) {
+            changeBottomColorHex(config.bottomColor, true);
+            const bottomPicker = document.getElementById('bottomColorPicker');
+            if (bottomPicker) bottomPicker.value = config.bottomColor;
+        }
+        if (config.shoeColor) {
+            changeShoeColorHex(config.shoeColor, true);
+            const shoePicker = document.getElementById('shoeColorPicker');
+            if (shoePicker) shoePicker.value = config.shoeColor;
+        }
+
+        // Apply styles
+        if (config.hairStyle) {
+            changeHairStyle(config.hairStyle, true);
+            const hairBtn = document.querySelector(`[data-hair-style="${config.hairStyle}"]`);
+            if (hairBtn) updateActiveButton('[data-hair-style]', hairBtn);
+        }
+        if (config.topStyle) {
+            changeTopStyle(config.topStyle, true);
+            const topBtn = document.querySelector(`[data-top="${config.topStyle}"]`);
+            if (topBtn) updateActiveButton('[data-top]', topBtn);
+        }
+        if (config.bottomStyle) {
+            changeBottomStyle(config.bottomStyle, true);
+            const bottomBtn = document.querySelector(`[data-bottom="${config.bottomStyle}"]`);
+            if (bottomBtn) updateActiveButton('[data-bottom]', bottomBtn);
+        }
+        if (config.shoeStyle) {
+            changeShoeStyle(config.shoeStyle, true);
+            const shoeBtn = document.querySelector(`[data-shoe="${config.shoeStyle}"]`);
+            if (shoeBtn) updateActiveButton('[data-shoe]', shoeBtn);
+        }
+        if (config.expression) {
+            changeExpression(config.expression, true);
+            const expressionBtn = document.querySelector(`[data-expression="${config.expression}"]`);
+            if (expressionBtn) updateActiveButton('[data-expression]', expressionBtn);
+        }
+
+        // Apply accessories and their colors
+        if (config.accessories) {
+            if (config.accessories.glasses) {
+                toggleAccessory('glasses', true);
+                const glassesBtn = document.querySelector('[data-accessory="glasses"]');
+                if (glassesBtn) glassesBtn.classList.add('active');
+            }
+            if (config.accessories.glassesColor) {
+                changeGlassesColorHex(config.accessories.glassesColor, true);
+                const glassesPicker = document.getElementById('glassesColorPicker');
+                if (glassesPicker) glassesPicker.value = config.accessories.glassesColor;
+            }
+
+            if (config.accessories.earrings) {
+                toggleAccessory('earrings', true);
+                const earringsBtn = document.querySelector('[data-accessory="earrings"]');
+                if (earringsBtn) earringsBtn.classList.add('active');
+            }
+            if (config.accessories.earringsColor) {
+                changeEarringsColorHex(config.accessories.earringsColor, true);
+                const earringsPicker = document.getElementById('earringsColorPicker');
+                if (earringsPicker) earringsPicker.value = config.accessories.earringsColor;
+            }
+
+            if (config.accessories.cat) {
+                toggleAccessory('cat', true);
+                const catBtn = document.querySelector('[data-accessory="cat"]');
+                if (catBtn) catBtn.classList.add('active');
+            }
+            if (config.accessories.catColor) {
+                changeCatColorHex(config.accessories.catColor, true);
+                const catPicker = document.getElementById('catColorPicker');
+                if (catPicker) catPicker.value = config.accessories.catColor;
+            }
+
+            if (config.accessories.dog) {
+                toggleAccessory('dog', true);
+                const dogBtn = document.querySelector('[data-accessory="dog"]');
+                if (dogBtn) dogBtn.classList.add('active');
+            }
+            if (config.accessories.dogColor) {
+                changeDogColorHex(config.accessories.dogColor, true);
+                const dogPicker = document.getElementById('dogColorPicker');
+                if (dogPicker) dogPicker.value = config.accessories.dogColor;
+            }
+        }
+
+        return true;
     }
 
     // Main initialization function
@@ -725,7 +916,8 @@
         messageInput = document.getElementById('messageInput');
         sendButton = document.getElementById('sendButton');
 
-        // Initialize all modules
+        // Initialize all modules with defaults
+        // The extension will send loadAvatarConfig message if saved config exists
         initializeCustomization();
 
         // Setup event listeners
@@ -740,6 +932,12 @@
 
         // Add initial welcome message
         addMessage('Hey there! I\'m your coding buddy! 🤖\\nReady to tackle some code together?', 'buddy');
+
+        // Signal to extension that webview is ready
+        console.log('[Webview] Sending webviewReady signal');
+        vscode.postMessage({
+            command: 'webviewReady'
+        });
     }
 
     // Initialize when DOM is ready
