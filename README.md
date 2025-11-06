@@ -19,9 +19,9 @@ Bring Claude Buddy directly into your VS Code editor! This extension adds a frie
 ## Building from Source 🔨
 
 ### **Prerequisites**
-- **Node.js** (v16 or higher)
+- **Node.js** (v22.19.0 recommended, see `.nvmrc`)
 - **npm** (comes with Node.js)
-- **VS Code Extension Manager (vsce)**
+- **Optional**: [nvm](https://github.com/nvm-sh/nvm) for Node version management
 
 ### **Step-by-Step Build Instructions**
 
@@ -31,33 +31,77 @@ Bring Claude Buddy directly into your VS Code editor! This extension adds a frie
    cd claude-code-buddy-extension
    ```
 
-2. **Install dependencies**
+2. **Use correct Node version** (if using nvm)
+   ```bash
+   nvm use
+   ```
+
+3. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Install vsce (VS Code Extension Manager)**
+4. **Build and package extension**
    ```bash
-   npm install -g @vscode/vsce
+   npm run package
    ```
 
-4. **Compile TypeScript**
+   This compiles TypeScript and creates: `claude-buddy-extension-0.0.1.vsix`
+
+### **Alternative Build Commands**
+```bash
+# Compile TypeScript only
+npm run compile
+
+# Watch mode for development
+npm run watch
+
+# Build and package (same as npm run package)
+npm run build-and-package
+```
+
+## Developing Locally 🔧
+
+For active development and testing of the extension:
+
+### **Quick Development Workflow**
+
+1. **Build the extension**
    ```bash
    npm run compile
    ```
 
-5. **Package into .vsix file**
+2. **Open the main extension file**
    ```bash
-   vsce package
+   # Open in VS Code (or manually open src/extension.ts)
+   code src/extension.ts
    ```
 
-   This creates: `claude-buddy-extension-0.0.1.vsix`
+3. **Start debugging**
+   - Use Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
+   - Run: **"Debug: Start Debugging"**
+   - Or simply press **F5**
 
-### **Quick Build Script**
-```bash
-# One command to build everything
-npm run compile && vsce package
-```
+4. **Test in Extension Development Host**
+   - A new VS Code window opens with your extension loaded
+   - Look for the 🤖 icon in the Activity Bar
+   - Click it to open Claude Buddy panel
+
+5. **Reload after changes**
+   - In the Extension Development Host window:
+   - Use Command Palette: **"Developer: Reload Window"**
+   - Or press **`Cmd+R`** (Mac) / **`Ctrl+R`** (Windows/Linux)
+
+6. **Iterate quickly**
+   - Make changes to `src/extension.ts`
+   - Run: `npm run compile` (step 1)
+   - Reload the Extension Development Host (step 5)
+   - Test your changes immediately
+
+### **Pro Tips for Development**
+- **Watch Mode**: Use `npm run watch` to auto-compile on file changes
+- **Debug Console**: Check VS Code Developer Tools (`Help` → `Toggle Developer Tools`) for errors
+- **Extension Logs**: Look for "Claude Buddy extension is now active!" in the Debug Console
 
 ## Installation 🚀
 
@@ -108,9 +152,8 @@ claude-code-buddy-extension/
 
 ### **Development Workflow**
 1. **Make changes** to `src/extension.ts`
-2. **Compile**: `npm run compile`
-3. **Test**: Press F5 in VS Code (opens Extension Development Host)
-4. **Package**: `vsce package` (creates .vsix file)
+2. **Test**: Press F5 in VS Code (opens Extension Development Host)
+3. **Package**: `npm run package` (compiles and creates .vsix file)
 
 ## Troubleshooting 🔧
 
@@ -118,7 +161,9 @@ claude-code-buddy-extension/
 
 **"vsce: command not found"**
 ```bash
-npm install -g @vscode/vsce
+# This should not happen as vsce is now included as a dev dependency
+# If it occurs, reinstall dependencies:
+npm install
 ```
 
 **"Cannot find module 'typescript'"**
