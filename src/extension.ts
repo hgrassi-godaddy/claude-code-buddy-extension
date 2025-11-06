@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { PromptHistoryService, PromptEntry } from './promptHistoryService';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Claude Buddy extension is now active!');
@@ -8,7 +9,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register the webview view provider
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider('claudeBuddyPanel', provider)
+        vscode.window.registerWebviewViewProvider('claudeBuddyPanel', provider),
+        provider // Add provider to subscriptions so dispose is called
     );
 
     // Register command to open panel
@@ -20,7 +22,15 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
-    constructor(private readonly _extensionUri: vscode.Uri) {}
+    private promptHistory: PromptHistoryService;
+
+    constructor(private readonly _extensionUri: vscode.Uri) {
+        this.promptHistory = new PromptHistoryService();
+    }
+
+    dispose() {
+        this.promptHistory.stopWatching();
+    }
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -33,6 +43,14 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+        // Load and send initial prompts as user messages
+        this._loadPromptsAsMessages(webviewView.webview);
+
+        // Start watching for file changes (load new prompts as messages)
+        this.promptHistory.startWatching((prompts) => {
+            this._loadPromptsAsMessages(webviewView.webview);
+        });
 
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(
@@ -57,6 +75,43 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
                 message: `Hey there! You said: "${message}". I'm Claude Buddy, your VS Code companion! 🤖`
             });
         }, 1000);
+    }
+
+    private async _loadPromptsAsMessages(webview: vscode.Webview) {
+        try {
+            const prompts = await this.promptHistory.getRecentPrompts();
+            if (prompts.length > 0) {
+                // Create conversation messages (user prompt + assistant reply pairs)
+                const conversationMessages: Array<{type: string, text: string, timestamp: string}> = [];
+
+                // Process prompts (they're already in oldest-first order after the reverse in getRecentPrompts)
+                prompts.reverse().forEach(prompt => {
+                    // Add user message
+                    conversationMessages.push({
+                        type: 'user',
+                        text: prompt.prompt,
+                        timestamp: prompt.displayTime
+                    });
+
+                    // Add assistant reply if available
+                    if (prompt.assistantReply) {
+                        conversationMessages.push({
+                            type: 'assistant',
+                            text: prompt.assistantReply.content,
+                            timestamp: prompt.assistantReply.displayTime
+                        });
+                    }
+                });
+
+                webview.postMessage({
+                    command: 'loadConversation',
+                    messages: conversationMessages
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load conversation:', error);
+            // Silently fail - extension should work without prompt history
+        }
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
@@ -703,6 +758,22 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
             switch (message.command) {
                 case 'receiveMessage':
                     addMessage(message.message, 'buddy');
+                    break;
+                case 'loadConversation':
+                    // Clear existing messages first to avoid duplicates
+                    messagesContainer.innerHTML = '';
+
+                    // Load conversation messages in order
+                    message.messages.forEach(msg => {
+                        const messageType = msg.type === 'user' ? 'user' : 'buddy';
+                        addMessage(msg.text, messageType);
+                    });
+                    break;
+                case 'loadPromptsAsMessages':
+                    // Legacy support - still handle the old format
+                    message.prompts.forEach(prompt => {
+                        addMessage(prompt.text, 'user');
+                    });
                     break;
             }
         });
