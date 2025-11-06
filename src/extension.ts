@@ -4,8 +4,8 @@ import { ClaudeBuddyViewProvider } from './providers/ClaudeBuddyViewProvider';
 export function activate(context: vscode.ExtensionContext) {
     console.log('Claude Buddy extension is now active!');
 
-    // Create the webview provider
-    const provider = new ClaudeBuddyViewProvider(context.extensionUri);
+    // Create the webview provider with context for persistent storage
+    const provider = new ClaudeBuddyViewProvider(context.extensionUri, context);
 
     // Register the webview view provider
     context.subscriptions.push(
