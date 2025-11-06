@@ -47,6 +47,7 @@ export class PromptHistoryService {
         content: TranscriptEntry[];
         timestamp: number;
     }>();
+    private replyCache = new Map<string, AssistantReply>(); // Cache for found replies to prevent reprocessing
 
     constructor() {
         this.logPath = path.join(
@@ -63,7 +64,7 @@ export class PromptHistoryService {
      * @param limit Maximum number of prompts to return
      * @returns Array of recent prompts, most recent first
      */
-    async getRecentPrompts(limit: number = 3): Promise<PromptEntry[]> {
+    async getRecentPrompts(limit: number = 2): Promise<PromptEntry[]> {
         try {
             // Check if file exists and is readable
             await fs.access(this.logPath, fs.constants.R_OK);
@@ -89,14 +90,36 @@ export class PromptHistoryService {
             // Load assistant replies for each prompt
             const promptsWithReplies = await Promise.all(
                 recentPrompts.map(async (prompt) => {
+                    // Create cache key for this prompt
+                    const cacheKey = `${prompt.sessionId}-${prompt.timestamp}-${prompt.prompt.substring(0, 100)}`;
+
+                    // Check if we already have a cached reply for this prompt
+                    const cachedReply = this.replyCache.get(cacheKey);
+                    if (cachedReply) {
+                        console.log(`[InitialLoad] 🚀 Using cached reply for: ${prompt.prompt.substring(0, 30)}`);
+                        return {
+                            ...prompt,
+                            assistantReply: cachedReply
+                        };
+                    }
+
+                    console.log(`[InitialLoad] Attempting to load reply for prompt: ${prompt.prompt.substring(0, 50)}`);
                     const reply = await this.loadAssistantReply(prompt);
 
-                    // If no reply found and we have transcript path, start watching for it
-                    if (!reply && prompt.transcriptPath) {
-                        // Start watching asynchronously (don't wait for it)
-                        this.startWatchingForReply(prompt).catch(error => {
-                            console.log('Failed to start watching for reply:', error);
-                        });
+                    if (reply) {
+                        console.log(`[InitialLoad] ✅ Found reply immediately for: ${prompt.prompt.substring(0, 30)}`);
+                        // Cache the reply to prevent reprocessing
+                        this.replyCache.set(cacheKey, reply);
+                    } else {
+                        console.log(`[InitialLoad] ❌ No reply found, starting progressive watcher for: ${prompt.prompt.substring(0, 30)}`);
+
+                        // If no reply found and we have transcript path, start watching for it
+                        if (prompt.transcriptPath) {
+                            // Start watching asynchronously (don't wait for it)
+                            this.startWatchingForReply(prompt).catch(error => {
+                                console.log('Failed to start watching for reply:', error);
+                            });
+                        }
                     }
 
                     return {
@@ -227,6 +250,15 @@ export class PromptHistoryService {
     }
 
     /**
+     * Cache a reply for a specific prompt to prevent reprocessing
+     */
+    private cacheReplyForPrompt(prompt: PromptEntry, reply: AssistantReply): void {
+        const cacheKey = `${prompt.sessionId}-${prompt.timestamp}-${prompt.prompt.substring(0, 100)}`;
+        this.replyCache.set(cacheKey, reply);
+        console.log(`[ReplyCache] Cached reply for prompt: ${prompt.prompt.substring(0, 30)}`);
+    }
+
+    /**
      * Start watching for assistant reply to a specific prompt
      */
     private async startWatchingForReply(prompt: PromptEntry): Promise<void> {
@@ -253,6 +285,9 @@ export class PromptHistoryService {
             (foundPromptId, reply) => {
                 console.log(`Reply found for prompt ${foundPromptId}:`, reply.content.substring(0, 100));
 
+                // Cache the found reply to prevent reprocessing
+                this.cacheReplyForPrompt(prompt, reply);
+
                 // Trigger a refresh of the prompts to include the new reply
                 if (this.onPromptUpdated) {
                     this.debounceReload();
@@ -263,6 +298,7 @@ export class PromptHistoryService {
 
     /**
      * Find the actual user message UUID by matching prompt content in transcript
+     * Uses the same logic as extractAssistantReply for consistency
      */
     private async extractUserUuid(prompt: PromptEntry): Promise<string | null> {
         if (!prompt.transcriptPath) {
@@ -273,47 +309,86 @@ export class PromptHistoryService {
             // Read the transcript file
             const transcriptEntries = await this.getCachedTranscript(prompt.transcriptPath);
 
-            // Look for user entries that match the prompt content and approximate timestamp
-            const promptTime = new Date(prompt.timestamp).getTime();
-            const timeWindow = 60000; // 1 minute window
+            // Use the same logic as extractAssistantReply for consistency
+            const userEntry = this.findUserEntryByContent(transcriptEntries, prompt.prompt, prompt.timestamp);
 
-            // Find matching user entry
-            for (const entry of transcriptEntries) {
-                if (entry.message?.role === 'user' && entry.uuid) {
-                    const entryTime = new Date(entry.timestamp).getTime();
-
-                    // Check if timestamps are close (within 1 minute)
-                    if (Math.abs(entryTime - promptTime) <= timeWindow) {
-                        // Extract user message content for comparison
-                        let entryContent = '';
-
-                        if (typeof entry.message.content === 'string') {
-                            entryContent = entry.message.content;
-                        } else if (Array.isArray(entry.message.content)) {
-                            // Extract text from content blocks
-                            const textBlocks = entry.message.content
-                                .filter(block => block.type === 'text' && block.text)
-                                .map(block => block.text);
-                            entryContent = textBlocks.join(' ');
-                        }
-
-                        // Check if prompt content matches (allowing for some variation)
-                        if (entryContent.includes(prompt.prompt.trim()) ||
-                            prompt.prompt.trim().includes(entryContent.trim())) {
-                            console.log(`[PromptHistory] Found matching user UUID: ${entry.uuid} for prompt: ${prompt.prompt.substring(0, 50)}`);
-                            return entry.uuid;
-                        }
-                    }
-                }
+            if (userEntry) {
+                console.log(`[PromptHistory] Found matching user UUID: ${userEntry.uuid} for prompt: ${prompt.prompt.substring(0, 50)}, ${prompt.timestamp}`);
+                return userEntry.uuid;
             }
 
-            console.log(`[PromptHistory] No matching user UUID found for prompt: ${prompt.prompt.substring(0, 50)}`);
+            console.log(`[PromptHistory] No matching user UUID found for prompt: ${prompt.prompt.substring(0, 50)}, ${prompt.timestamp}`);
             return null;
 
         } catch (error) {
             console.log('Error extracting user UUID:', error);
             return null;
         }
+    }
+
+    /**
+     * Unified method to find user entry by content matching
+     * Used by both extractAssistantReply and extractUserUuid for consistency
+     * Returns the LAST (most recent) entry that matches the prompt text
+     */
+    private findUserEntryByContent(entries: TranscriptEntry[], userPrompt: string, timestamp?: string): TranscriptEntry | null {
+        // Use substring matching (first 50 chars) like the original extractAssistantReply
+        const promptSnippet = userPrompt.substring(0, 50);
+
+        // If we have timestamp, use it to narrow down the search
+        let candidateEntries = entries.filter(entry =>
+            entry.type === 'user' &&
+            entry.message &&
+            entry.message.role === 'user' &&
+            typeof entry.message.content === 'string'
+        );
+
+        console.log(`[UserEntrySearch] Found ${candidateEntries.length} candidate user entries for prompt snippet: ${promptSnippet}, timestamp: ${timestamp || 'N/A'}`);
+        // Find ALL entries that match the content (not just the first one)
+        const matchingEntries = candidateEntries.filter(entry => {
+            const entryContent = entry.message?.content as string;
+            if (!entryContent) return false;
+
+            // Try multiple matching strategies for robustness
+            return (
+                entryContent.includes(promptSnippet) ||           // Original working logic
+                entryContent.includes(userPrompt.trim()) ||       // Full content match
+                userPrompt.trim().includes(entryContent.trim()) || // Reverse match
+                this.fuzzyMatch(entryContent, userPrompt)          // Fuzzy matching
+            );
+        });
+
+        if (matchingEntries.length === 0) {
+            console.log(`[UserEntrySearch] No matching entries found for prompt: ${promptSnippet}`);
+            return null;
+        }
+
+        console.log(`[UserEntrySearch] Found ${matchingEntries.length} matching entries for prompt: ${promptSnippet}`);
+
+        // Sort by timestamp and return the LAST (most recent) entry
+        const sortedMatches = matchingEntries.sort((a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+
+        const lastEntry = sortedMatches[sortedMatches.length - 1];
+
+        console.log(`[UserEntrySearch] Found ${matchingEntries.length} matching entries for prompt "${promptSnippet}", selected most recent: ${lastEntry.uuid} (${lastEntry.timestamp})`);
+
+        return lastEntry;
+    }
+
+    /**
+     * Simple fuzzy matching for content that might have minor differences
+     */
+    private fuzzyMatch(content1: string, content2: string): boolean {
+        // Normalize both strings (remove extra whitespace, convert to lowercase)
+        const normalize = (str: string) => str.trim().toLowerCase().replace(/\s+/g, ' ');
+
+        const norm1 = normalize(content1);
+        const norm2 = normalize(content2);
+
+        // Check if either contains the other after normalization
+        return norm1.includes(norm2) || norm2.includes(norm1);
     }
 
     /**
@@ -427,32 +502,34 @@ export class PromptHistoryService {
         entries: TranscriptEntry[],
         userPrompt: string
     ): Promise<AssistantReply | null> {
-        // Find user message UUID that matches the prompt
-        // For user entries, message.content is a string containing the prompt text
-        const promptSnippet = userPrompt.substring(0, 50);
-        const userEntry = entries.find(entry => {
-            // Check if this is a user entry with message.content as string
-            if (entry.type === 'user' &&
-                entry.message &&
-                entry.message.role === 'user' &&
-                typeof entry.message.content === 'string') {
-                return entry.message.content.includes(promptSnippet);
-            }
-            return false;
-        });
+        // Use the unified user entry finding logic
+        const userEntry = this.findUserEntryByContent(entries, userPrompt);
 
         if (!userEntry) {
-            console.log('Could not find matching user entry for prompt:', promptSnippet);
+            console.log('Could not find matching user entry for prompt:', userPrompt.substring(0, 50));
             return null;
         }
+
+        console.log(`[AssistantReply] Found user entry UUID: ${userEntry.uuid} for prompt: ${userPrompt.substring(0, 50)}`);
 
         // Find all assistant replies in the conversation thread
         const assistantReplies = this.findAssistantRepliesAfter(entries, userEntry.uuid);
 
         if (assistantReplies.length === 0) {
             console.log('No assistant replies found for user message:', userEntry.uuid);
+            // Add more debugging info
+            console.log('Available entries in transcript:', entries.length);
+            console.log('User entry details:', {
+                uuid: userEntry.uuid,
+                timestamp: userEntry.timestamp,
+                content: typeof userEntry.message?.content === 'string'
+                    ? userEntry.message.content.substring(0, 100)
+                    : 'Non-string content'
+            });
             return null;
         }
+
+        console.log(`[AssistantReply] Found ${assistantReplies.length} assistant replies for user message: ${userEntry.uuid}`);
 
         // Get the last reply with text content
         const lastReply = assistantReplies[assistantReplies.length - 1];
@@ -473,6 +550,7 @@ export class PromptHistoryService {
 
     /**
      * Find all assistant replies that come after a specific user message in the conversation thread
+     * Uses the same logic as ReplyWatcherService for consistency
      */
     private findAssistantRepliesAfter(
         entries: TranscriptEntry[],
@@ -480,35 +558,70 @@ export class PromptHistoryService {
     ): TranscriptEntry[] {
         const replies: TranscriptEntry[] = [];
 
-        // Build parent-child relationship map
-        const childMap = new Map<string, TranscriptEntry[]>();
-        entries.forEach(entry => {
-            if (entry.parentUuid) {
-                if (!childMap.has(entry.parentUuid)) {
-                    childMap.set(entry.parentUuid, []);
-                }
-                childMap.get(entry.parentUuid)!.push(entry);
+        // Follow the conversation chain step by step (like ReplyWatcherService)
+        let currentUuid = userUuid;
+        let maxDepth = 20; // Prevent infinite loops
+        let depth = 0;
+        const visitedUuids = new Set<string>(); // Prevent cycles
+
+        console.log(`[ConversationChain] Starting chain walk from user UUID: ${userUuid}`);
+
+        while (currentUuid && depth < maxDepth && !visitedUuids.has(currentUuid)) {
+            visitedUuids.add(currentUuid);
+
+            // Look for entries that have this UUID as parentUuid
+            const nextEntries = entries.filter(entry =>
+                entry.parentUuid === currentUuid &&
+                entry.message?.role === 'assistant' &&
+                entry.message?.content // Must have content
+            );
+
+            console.log(`[ConversationChain] Depth ${depth}: Found ${nextEntries.length} assistant entries for parent ${currentUuid}`);
+
+            if (nextEntries.length === 0) {
+                // No more entries in the chain
+                break;
             }
-        });
 
-        // Recursively walk the conversation tree starting from the user message
-        const walkTree = (uuid: string) => {
-            const children = childMap.get(uuid) || [];
-            children.forEach(child => {
-                // Check if this is an assistant entry with message.content as array
-                if (child.type === 'assistant' &&
-                    child.message &&
-                    child.message.role === 'assistant' &&
-                    child.message.type === 'message' &&
-                    Array.isArray(child.message.content)) {
-                    replies.push(child);
+            // Process all assistant entries at this level
+            let foundTextContent = false;
+            for (const nextEntry of nextEntries) {
+                const content = nextEntry.message?.content;
+                if (!content) continue;
+
+                if (Array.isArray(content)) {
+                    // Find text content in the array
+                    const hasText = content.some(item => item.type === 'text' && item.text?.trim());
+                    console.log(`[ConversationChain] Assistant entry ${nextEntry.uuid} has text content: ${hasText}`);
+
+                    if (hasText) {
+                        replies.push(nextEntry);
+                        foundTextContent = true;
+                    }
+                    // Continue following the chain from this entry regardless
+                    currentUuid = nextEntry.uuid;
+                } else if (typeof content === 'string' && content.trim()) {
+                    // Direct string content
+                    console.log(`[ConversationChain] Assistant entry ${nextEntry.uuid} has string content`);
+                    replies.push(nextEntry);
+                    foundTextContent = true;
+                    currentUuid = nextEntry.uuid;
+                } else {
+                    // No meaningful content, continue chain
+                    currentUuid = nextEntry.uuid;
                 }
-                // Continue walking the tree for nested conversations
-                walkTree(child.uuid);
-            });
-        };
+            }
 
-        walkTree(userUuid);
+            // If we found text content, we can potentially stop here
+            // But continue to see if there are more replies in the chain
+            if (foundTextContent && replies.length > 0) {
+                // We found at least one good reply, but continue to get all of them
+            }
+
+            depth++;
+        }
+
+        console.log(`[ConversationChain] Chain walk completed. Found ${replies.length} assistant replies`);
 
         // Sort by timestamp to ensure chronological order
         return replies.sort((a, b) =>
