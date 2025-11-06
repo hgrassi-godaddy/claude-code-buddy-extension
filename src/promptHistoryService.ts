@@ -3,6 +3,7 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
+import { ReplyWatcherService } from './services/ReplyWatcherService';
 
 export interface PromptEntry {
     timestamp: string;
@@ -41,6 +42,7 @@ export class PromptHistoryService {
     private logPath: string;
     private watcher?: fsSync.FSWatcher;
     private onPromptUpdated?: (prompts: PromptEntry[]) => void;
+    private replyWatcher: ReplyWatcherService;
     private transcriptCache = new Map<string, {
         content: TranscriptEntry[];
         timestamp: number;
@@ -53,6 +55,7 @@ export class PromptHistoryService {
             'hook-logs',
             'user-prompts-log.txt'
         );
+        this.replyWatcher = new ReplyWatcherService();
     }
 
     /**
@@ -87,6 +90,15 @@ export class PromptHistoryService {
             const promptsWithReplies = await Promise.all(
                 recentPrompts.map(async (prompt) => {
                     const reply = await this.loadAssistantReply(prompt);
+
+                    // If no reply found and we have transcript path, start watching for it
+                    if (!reply && prompt.transcriptPath) {
+                        // Start watching asynchronously (don't wait for it)
+                        this.startWatchingForReply(prompt).catch(error => {
+                            console.log('Failed to start watching for reply:', error);
+                        });
+                    }
+
                     return {
                         ...prompt,
                         assistantReply: reply || undefined
@@ -209,6 +221,98 @@ export class PromptHistoryService {
             this.watcher.close();
             this.watcher = undefined;
             console.log('Stopped watching prompt history file');
+        }
+
+        this.replyWatcher.dispose();
+    }
+
+    /**
+     * Start watching for assistant reply to a specific prompt
+     */
+    private async startWatchingForReply(prompt: PromptEntry): Promise<void> {
+        if (!prompt.transcriptPath) {
+            return;
+        }
+
+        // Extract user UUID from prompt data by matching content in transcript
+        const userUuid = await this.extractUserUuid(prompt);
+        if (!userUuid) {
+            console.log('Cannot watch for reply - no user UUID found for prompt:', prompt.prompt.substring(0, 50));
+            return;
+        }
+
+        // Generate unique prompt ID for tracking
+        const promptId = `${prompt.sessionId}-${prompt.timestamp}`;
+
+        console.log(`Starting to watch for reply to prompt: ${promptId}, user UUID: ${userUuid}`);
+
+        this.replyWatcher.watchForReply(
+            promptId,
+            prompt.transcriptPath,
+            userUuid,
+            (foundPromptId, reply) => {
+                console.log(`Reply found for prompt ${foundPromptId}:`, reply.content.substring(0, 100));
+
+                // Trigger a refresh of the prompts to include the new reply
+                if (this.onPromptUpdated) {
+                    this.debounceReload();
+                }
+            }
+        );
+    }
+
+    /**
+     * Find the actual user message UUID by matching prompt content in transcript
+     */
+    private async extractUserUuid(prompt: PromptEntry): Promise<string | null> {
+        if (!prompt.transcriptPath) {
+            return null;
+        }
+
+        try {
+            // Read the transcript file
+            const transcriptEntries = await this.getCachedTranscript(prompt.transcriptPath);
+
+            // Look for user entries that match the prompt content and approximate timestamp
+            const promptTime = new Date(prompt.timestamp).getTime();
+            const timeWindow = 60000; // 1 minute window
+
+            // Find matching user entry
+            for (const entry of transcriptEntries) {
+                if (entry.message?.role === 'user' && entry.uuid) {
+                    const entryTime = new Date(entry.timestamp).getTime();
+
+                    // Check if timestamps are close (within 1 minute)
+                    if (Math.abs(entryTime - promptTime) <= timeWindow) {
+                        // Extract user message content for comparison
+                        let entryContent = '';
+
+                        if (typeof entry.message.content === 'string') {
+                            entryContent = entry.message.content;
+                        } else if (Array.isArray(entry.message.content)) {
+                            // Extract text from content blocks
+                            const textBlocks = entry.message.content
+                                .filter(block => block.type === 'text' && block.text)
+                                .map(block => block.text);
+                            entryContent = textBlocks.join(' ');
+                        }
+
+                        // Check if prompt content matches (allowing for some variation)
+                        if (entryContent.includes(prompt.prompt.trim()) ||
+                            prompt.prompt.trim().includes(entryContent.trim())) {
+                            console.log(`[PromptHistory] Found matching user UUID: ${entry.uuid} for prompt: ${prompt.prompt.substring(0, 50)}`);
+                            return entry.uuid;
+                        }
+                    }
+                }
+            }
+
+            console.log(`[PromptHistory] No matching user UUID found for prompt: ${prompt.prompt.substring(0, 50)}`);
+            return null;
+
+        } catch (error) {
+            console.log('Error extracting user UUID:', error);
+            return null;
         }
     }
 

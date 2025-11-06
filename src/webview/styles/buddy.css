@@ -1,0 +1,292 @@
+/* Buddy Section - Optimized */
+.buddy-section {
+    flex: 0 0 240px;
+    text-align: center;
+    padding: 8px 16px;
+    border: 2px dashed var(--vscode-input-border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    background: var(--vscode-input-background);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.buddy-avatar {
+    width: 180px;
+    height: 190px;
+    margin: 4px auto 8px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Cyborg Container */
+.cyborg-container {
+    position: relative;
+    width: 180px;
+    height: 190px;
+}
+
+/* Hair Styles */
+.hair-style {
+    display: none;
+}
+
+.hair-style.active {
+    display: block;
+}
+
+/* Expression Styles */
+.expression {
+    display: none;
+}
+
+.expression.active {
+    display: block;
+}
+
+/* Accessory Styles */
+.accessory {
+    display: none;
+}
+
+.accessory.active {
+    display: block;
+}
+
+/* Style Controls */
+.style-controls {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+}
+
+.style-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--vscode-input-border);
+    background: var(--vscode-input-background);
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.style-btn:hover {
+    transform: scale(1.05);
+    border-color: var(--vscode-button-background);
+}
+
+.style-btn.active {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-color: var(--vscode-button-background);
+}
+
+/* Color Picker Styles */
+.color-picker-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.color-picker-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.color-picker {
+    width: 100%;
+    height: 40px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 8px;
+    background: var(--vscode-input-background);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.color-picker:hover {
+    border-color: var(--vscode-button-background);
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border-radius: 4px;
+}
+
+.color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+/* Clothing System Styles */
+.top-style, .bottom-style, .shoe-style {
+    display: none;
+}
+
+.top-style.active, .bottom-style.active, .shoe-style.active {
+    display: block;
+}
+
+/* Color Controls */
+.color-controls {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 4px 0;
+    flex-wrap: wrap;
+    max-width: 120px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.color-btn {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--vscode-input-border);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.color-btn:hover {
+    transform: scale(1.2);
+}
+
+.color-btn.active {
+    border-color: var(--vscode-button-background);
+    box-shadow: 0 0 6px rgba(14, 99, 156, 0.5);
+}
+
+/* Let's Code Button */
+.lets-code-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: 2px solid var(--vscode-button-border);
+    border-radius: 15px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.buddy-avatar:hover .lets-code-button {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1.05);
+}
+
+.lets-code-button:hover {
+    background: var(--vscode-button-hoverBackground);
+    transform: scale(1.1);
+}
+
+.lets-code-button:active {
+    transform: scale(0.95);
+}
+
+/* Coding Mode Styles */
+.coding-mode .customization-nav {
+    display: none;
+}
+
+.coding-mode .customization-panel {
+    display: none;
+}
+
+.coding-mode .chat-section {
+    flex: 1;
+    max-width: none;
+}
+
+.coding-mode .buddy-section {
+    flex: 0 0 200px;
+}
+
+/* Buddy Header */
+.buddy-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--vscode-widget-border);
+    background: var(--vscode-sideBar-background);
+}
+
+.friendship-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    cursor: pointer;
+}
+
+.friendship-label {
+    font-size: 11px;
+    font-weight: bold;
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+.friendship-bar-small {
+    flex: 1;
+    height: 4px;
+    background: var(--vscode-progressBar-background);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.friendship-bar-small .friendship-progress {
+    width: 0%;
+    height: 100%;
+    background: var(--vscode-progressBar-foreground);
+    transition: width 0.5s ease;
+}
+
+/* Friendship Tooltip */
+.friendship-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--vscode-editorHoverWidget-background);
+    color: var(--vscode-editorHoverWidget-foreground);
+    border: 1px solid var(--vscode-editorHoverWidget-border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    margin-bottom: 5px;
+}
+
+.friendship-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid var(--vscode-editorHoverWidget-border);
+}
+
+.friendship-compact:hover .friendship-tooltip {
+    opacity: 1;
+    visibility: visible;
+}

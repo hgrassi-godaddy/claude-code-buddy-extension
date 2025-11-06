@@ -1,0 +1,78 @@
+/* Chat Section */
+.chat-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 8px;
+    background: var(--vscode-background);
+    margin-bottom: 12px;
+}
+
+.message {
+    margin-bottom: 12px;
+    display: flex;
+}
+
+.user-message {
+    justify-content: flex-end;
+}
+
+.buddy-message {
+    justify-content: flex-start;
+}
+
+.message-bubble {
+    max-width: 80%;
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+
+.user-message .message-bubble {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}
+
+.buddy-message .message-bubble {
+    background: var(--vscode-input-background);
+    color: var(--vscode-foreground);
+    border: 1px solid var(--vscode-input-border);
+}
+
+.input-container {
+    display: flex;
+    gap: 8px;
+}
+
+#messageInput {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 8px;
+    background: var(--vscode-input-background);
+    color: var(--vscode-foreground);
+    font-family: inherit;
+}
+
+#sendButton {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    cursor: pointer;
+}
+
+#sendButton:hover {
+    opacity: 0.9;
+}

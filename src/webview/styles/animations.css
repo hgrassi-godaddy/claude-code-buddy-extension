@@ -1,0 +1,69 @@
+/* Cyborg Animations */
+.cyborg-body {
+    animation: cyborgFloat 3s ease-in-out infinite;
+}
+
+.cyborg-head {
+    animation: cyborgBob 2.5s ease-in-out infinite;
+}
+
+.cyborg-eyes {
+    animation: cyborgBlink 4s ease-in-out infinite;
+}
+
+.cyborg-hair {
+    animation: hairSway 3.5s ease-in-out infinite;
+}
+
+.cyber-glow {
+    animation: cyberPulse 2s ease-in-out infinite;
+}
+
+/* Animation Keyframes */
+@keyframes cyborgFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
+}
+
+@keyframes cyborgBob {
+    0%, 100% { transform: rotate(0deg); }
+    30% { transform: rotate(1deg); }
+    70% { transform: rotate(-1deg); }
+}
+
+@keyframes cyborgBlink {
+    0%, 90%, 100% { opacity: 1; }
+    95% { opacity: 0.2; }
+}
+
+@keyframes hairSway {
+    0%, 100% { transform: translateX(0px) rotate(0deg); }
+    50% { transform: translateX(1px) rotate(1deg); }
+}
+
+@keyframes cyberPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Animation Effects */
+.cyberpunk-mode .cyber-glow {
+    filter: drop-shadow(0 0 6px var(--cyber-color)) drop-shadow(0 0 12px var(--cyber-color));
+}
+
+.cyberpunk-mode .cyborg-body {
+    filter: drop-shadow(0 0 15px var(--cyber-color, #9D00FF)) drop-shadow(0 0 30px var(--cyber-color, #9D00FF));
+}
+
+.cyberpunk-mode .cyborg-head {
+    filter: drop-shadow(0 0 8px var(--cyber-color, #9D00FF));
+}
+
+.cyberpunk-mode .cyborg-eyes circle[fill*="#"] {
+    filter: drop-shadow(0 0 4px var(--eye-color));
+}

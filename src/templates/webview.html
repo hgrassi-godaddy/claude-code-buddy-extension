@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}'; img-src {{cspSource}};">
+    <title>Claude Buddy</title>
+    <link rel="stylesheet" href="{{mainCss}}">
+    <link rel="stylesheet" href="{{buddyCss}}">
+    <link rel="stylesheet" href="{{chatCss}}">
+    <link rel="stylesheet" href="{{navigationCss}}">
+    <link rel="stylesheet" href="{{animationsCss}}">
+</head>
+<body>
+    <div class="container">
+        <!-- Large Buddy Section -->
+        <div class="buddy-section">
+            <!-- Buddy Header with Friendship -->
+            <div class="buddy-header">
+                <div class="friendship-compact" id="friendshipCompact">
+                    <span class="friendship-label">💖 Friendship 0%</span>
+                    <div class="friendship-bar-small">
+                        <div class="friendship-progress"></div>
+                    </div>
+                    <div class="friendship-tooltip" id="friendshipTooltip">Best Friends! 🌟</div>
+                </div>
+            </div>
+
+            <div class="buddy-avatar">
+                <div class="cyborg-container">
+                    {{avatarSvg}}
+                </div>
+                <button class="lets-code-button" id="letscodeBtn">Let's Code!</button>
+            </div>
+
+            <!-- Navigation Interface -->
+            <div class="customization-nav">
+                <div class="nav-header">
+                    <button class="nav-arrow" id="prevBtn">‹</button>
+                    <span class="nav-title" id="navTitle">Style</span>
+                    <button class="nav-arrow" id="nextBtn">›</button>
+                </div>
+
+                <!-- Style Panel -->
+                <div class="customization-panel active" id="stylePanel">
+                    <div class="style-controls">
+                        <div class="style-btn active" data-style="cyberpunk">🌃 Cyber</div>
+                        <div class="style-btn" data-style="academic">🎓 Academic</div>
+                        <div class="style-btn" data-style="casual">👕 Casual</div>
+                    </div>
+                </div>
+
+                <!-- Skin Color Panel -->
+                <div class="customization-panel" id="skinPanel">
+                    <div class="color-picker-container">
+                        <input type="color" id="skinColorPicker" value="#C0C0C0" class="color-picker">
+                    </div>
+                </div>
+
+                <!-- Hair Panel (Styles + Color Picker) -->
+                <div class="customization-panel" id="hairPanel">
+                    <!-- Hair Style Controls -->
+                    <div class="style-controls" style="margin-bottom: 8px;">
+                        <div class="style-btn active" data-hair-style="1" style="font-size: 10px;">Bald</div>
+                        <div class="style-btn" data-hair-style="2" style="font-size: 10px;">Spiky</div>
+                        <div class="style-btn" data-hair-style="3" style="font-size: 10px;">Long</div>
+                        <div class="style-btn" data-hair-style="4" style="font-size: 10px;">Clean Cut</div>
+                    </div>
+                    <!-- Hair Color Picker -->
+                    <div class="color-picker-container">
+                        <input type="color" id="hairColorPicker" value="#8B4513" class="color-picker">
+                    </div>
+                </div>
+
+                <!-- Eye Color Panel -->
+                <div class="customization-panel" id="eyePanel">
+                    <div class="color-picker-container">
+                        <input type="color" id="eyeColorPicker" value="#ec4899" class="color-picker">
+                    </div>
+                </div>
+
+                <!-- Accessories Panel -->
+                <div class="customization-panel" id="accessoryPanel">
+                    <div class="style-controls" style="margin-bottom: 8px;">
+                        <div class="style-btn" data-accessory="glasses" style="font-size: 10px;">Glasses</div>
+                        <div class="style-btn" data-accessory="earrings" style="font-size: 10px;">Earrings</div>
+                        <div class="style-btn" data-accessory="cat" style="font-size: 10px;">Cat</div>
+                        <div class="style-btn" data-accessory="dog" style="font-size: 10px;">Dog</div>
+                    </div>
+                    <!-- Individual Color Pickers -->
+                    <div class="color-picker-container">
+                        <div id="glasses-color-picker" class="individual-color-picker" style="display: none; margin-bottom: 4px;">
+                            <label style="font-size: 10px; color: var(--vscode-foreground);">Glasses:</label>
+                            <input type="color" id="glassesColorPicker" value="#E74C3C" class="color-picker">
+                        </div>
+                        <div id="earrings-color-picker" class="individual-color-picker" style="display: none; margin-bottom: 4px;">
+                            <label style="font-size: 10px; color: var(--vscode-foreground);">Earrings:</label>
+                            <input type="color" id="earringsColorPicker" value="#FFD700" class="color-picker">
+                        </div>
+                        <div id="cat-color-picker" class="individual-color-picker" style="display: none; margin-bottom: 4px;">
+                            <label style="font-size: 10px; color: var(--vscode-foreground);">Cat:</label>
+                            <input type="color" id="catColorPicker" value="#FF8C42" class="color-picker">
+                        </div>
+                        <div id="dog-color-picker" class="individual-color-picker" style="display: none; margin-bottom: 4px;">
+                            <label style="font-size: 10px; color: var(--vscode-foreground);">Dog:</label>
+                            <input type="color" id="dogColorPicker" value="#8B4513" class="color-picker">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tops Panel -->
+                <div class="customization-panel" id="topPanel">
+                    <div class="style-controls" style="margin-bottom: 8px;">
+                        <div class="style-btn active" data-top="tanktop" style="font-size: 10px;">Tank Top</div>
+                        <div class="style-btn" data-top="tshirt" style="font-size: 10px;">T-Shirt</div>
+                        <div class="style-btn" data-top="hoodie" style="font-size: 10px;">Hoodie</div>
+                        <div class="style-btn" data-top="vest" style="font-size: 10px;">Vest</div>
+                    </div>
+                    <div class="color-picker-container">
+                        <input type="color" id="topColorPicker" value="#3498DB" class="color-picker">
+                    </div>
+                </div>
+
+                <!-- Bottoms Panel -->
+                <div class="customization-panel" id="bottomPanel">
+                    <div class="style-controls" style="margin-bottom: 8px;">
+                        <div class="style-btn active" data-bottom="pants" style="font-size: 10px;">Pants</div>
+                        <div class="style-btn" data-bottom="skirt" style="font-size: 10px;">Skirt</div>
+                    </div>
+                    <div class="color-picker-container">
+                        <input type="color" id="bottomColorPicker" value="#2C3E50" class="color-picker">
+                    </div>
+                </div>
+
+                <!-- Shoes Panel -->
+                <div class="customization-panel" id="shoePanel">
+                    <div class="color-picker-container">
+                        <input type="color" id="shoeColorPicker" value="#1A1A1A" class="color-picker">
+                    </div>
+                </div>
+
+                <!-- Expression Panel -->
+                <div class="customization-panel" id="expressionPanel">
+                    <div class="style-controls">
+                        <div class="style-btn active" data-expression="neutral" style="font-size: 10px;">😐 Neutral</div>
+                        <div class="style-btn" data-expression="happy" style="font-size: 10px;">😊 Happy</div>
+                        <div class="style-btn" data-expression="excited" style="font-size: 10px;">🤩 Excited</div>
+                        <div class="style-btn" data-expression="focused" style="font-size: 10px;">🤔 Focused</div>
+                        <div class="style-btn" data-expression="sleepy" style="font-size: 10px;">😴 Sleepy</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-section">
+            <div id="messages" class="messages"></div>
+            <div class="input-container">
+                <input type="text" id="messageInput" placeholder="Message Buddy..." maxlength="500">
+                <button id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script nonce="{{nonce}}" src="{{mainJs}}"></script>
+</body>
+</html>
