@@ -44,6 +44,44 @@ export class PromptHistoryService {
         console.log('[PromptHistoryService] Notifications path:', this.notificationsPath);
         console.log('[PromptHistoryService] Will only track NEW prompts from now on (ignoring existing prompts)');
         console.log('[PromptHistoryService] Starting from timestamp:', new Date(this.lastProcessedTimestamp).toISOString());
+
+        // Ensure directory structure exists
+        this.ensureDirectoryStructure().catch(error => {
+            console.log('[PromptHistoryService] Directory creation failed (non-fatal):', error.message);
+        });
+    }
+
+    /**
+     * Ensure that the required directory structure exists for Claude Code integration
+     * Creates ~/.claude/hook-logs/ directory and initializes log files if needed
+     */
+    private async ensureDirectoryStructure(): Promise<void> {
+        try {
+            const hookLogsDir = path.dirname(this.logPath);
+
+            // Create ~/.claude/hook-logs/ directory if it doesn't exist
+            await fs.mkdir(hookLogsDir, { recursive: true });
+            console.log('[PromptHistoryService] ✅ Created directory structure:', hookLogsDir);
+
+            // Create empty log files if they don't exist (using append mode to avoid overwriting)
+            try {
+                await fs.writeFile(this.logPath, '', { flag: 'a' });
+                console.log('[PromptHistoryService] ✅ Ensured user-prompts-log.txt exists');
+            } catch (error: any) {
+                console.log('[PromptHistoryService] Could not create user-prompts-log.txt:', error.message);
+            }
+
+            try {
+                await fs.writeFile(this.notificationsPath, '', { flag: 'a' });
+                console.log('[PromptHistoryService] ✅ Ensured notifications.txt exists');
+            } catch (error: any) {
+                console.log('[PromptHistoryService] Could not create notifications.txt:', error.message);
+            }
+
+        } catch (error: any) {
+            console.log('[PromptHistoryService] ❌ Could not create directory structure:', error.message);
+            console.log('[PromptHistoryService] This is non-fatal - extension will work once Claude Code hooks are set up');
+        }
     }
 
     /**
