@@ -181,6 +181,8 @@ export class PromptHistoryService {
                     this.notificationsWatcher = fsSync.watch(notificationsDir, { persistent: false }, (eventType: string, filename: string | null) => {
                         if (filename === notificationsFilename && eventType === 'change') {
                             this.handleNotificationChange();
+                            // Trigger UI update after processing notification
+                            this.debounceReload();
                         }
                     });
 
@@ -233,11 +235,32 @@ export class PromptHistoryService {
             const notificationCount = lines.length;
 
             if (notificationCount > 0) {
-                // Get the last notification as description
+                // Get the last notification and parse the message
                 const lastLine = lines[lines.length - 1];
-                const description = `Received Claude Code notification: ${lastLine.substring(0, 50)}${lastLine.length > 50 ? '...' : ''}`;
 
-                this.friendshipService.incrementCategory('notifications', 1, description);
+                try {
+                    // Parse the notification line: [timestamp] JSON_data
+                    const match = lastLine.match(/^\[(.*?)\]\s+(.+)$/);
+                    console.log('****** Notification line match:', match);
+                    if (match) {
+                        const jsonData = match[2];
+                        const data = JSON.parse(jsonData);
+
+                        // Extract the actual notification message
+                        const notificationMessage = data.message || 'Unknown notification';
+                        const description = `Received Claude Code notification: ${notificationMessage}`;
+
+                        this.friendshipService.incrementCategory('notifications', 1, description);
+                    } else {
+                        // Fallback to old method if parsing fails
+                        const description = `Received Claude Code notification`;
+                        this.friendshipService.incrementCategory('notifications', 1, description);
+                    }
+                } catch (parseError) {
+                    // Fallback to old method if JSON parsing fails
+                    const description = `Received Claude Code notification: ${lastLine.substring(0, 50)}${lastLine.length > 50 ? '...' : ''}`;
+                    this.friendshipService.incrementCategory('notifications', 1, description);
+                }
             }
 
         } catch (error: any) {
