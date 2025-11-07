@@ -10,14 +10,20 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
     private webviewService: WebviewService;
     private friendshipService: FriendshipService;
     private _context: vscode.ExtensionContext;
+    private hasShownRecentActivityNotification: boolean = false;
 
     constructor(private readonly _extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
         this._context = context;
         this.friendshipService = new FriendshipService(context);
 
+        // Get saved avatar config to initialize chat service with correct style
+        const savedConfig = context.globalState.get('claudeBuddyAvatarConfig') as any;
+        const initialStyle = savedConfig?.style || 'cyberpunk';
+
+
         // Pass friendshipService to promptHistory for friendship tracking integration
         this.promptHistory = new PromptHistoryService(this.friendshipService);
-        this.chatService = new ChatService();
+        this.chatService = new ChatService(initialStyle);
         this.webviewService = new WebviewService(_extensionUri);
     }
 
@@ -48,11 +54,15 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
                 console.log('[Extension] Received message from webview:', message.command);
                 switch (message.command) {
                     case 'sendMessage':
-                        // Handle chat messages here
-                        this._handleChatMessage(message.text, webviewView.webview);
+                        // Enable Claude Code prompt tracking after first user interaction
+                        this.promptHistory.enableTracking();
 
-                        // Increment chat friendship category
+
+                        // Increment chat friendship category BEFORE handling the chat message
                         this.friendshipService.incrementCategory('chat', 1, 'Sent a chat message');
+
+                        // Handle chat messages here with updated friendship percentage
+                        this._handleChatMessage(message.text, message.style, webviewView.webview);
 
                         // Send updated friendship data to webview
                         this._sendFriendshipUpdate(webviewView.webview);
@@ -66,7 +76,23 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
                         // Webview is ready, send initial data
                         console.log('[Extension] Webview ready, loading avatar config');
                         this._loadAvatarConfig(webviewView.webview);
-                        // Send initial friendship data
+
+                        // Update version tracking without resetting data (data persists across installs)
+                        const currentVersion = '0.0.1';
+                        this._context.globalState.update('claudeBuddyVersion', currentVersion);
+
+                        // Process recent Claude Code activity for initial friendship display
+                        this.promptHistory.loadRecentActivityForFriendship().then(() => {
+                            console.log('[Extension] Recent activity processed, sending friendship update...');
+
+                            // Send updated friendship data after processing recent activity
+                            // The webview will handle showing the notification when it receives this update
+                            this._sendFriendshipUpdate(webviewView.webview);
+                        }).catch(error => {
+                            console.log('[Extension] No recent activity to process:', error);
+                        });
+
+                        // Send initial friendship data (will be updated after recent activity processing)
                         this._sendFriendshipUpdate(webviewView.webview);
                         // this._loadPromptsAsMessages(webviewView.webview); // DISABLED - no longer loading prompts in chat
                         break;
@@ -89,6 +115,12 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
 
                         console.log('[Extension] Friendship progress reset complete');
                         break;
+
+                    case 'dismissNotification':
+                        // User dismissed the recent activity notification
+                        console.log('[Extension] Recent activity notification dismissed');
+                        break;
+
                 }
             },
             undefined,
@@ -114,8 +146,42 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private async _handleChatMessage(message: string, webview: vscode.Webview) {
-        await this.chatService.handleChatMessage(message, webview);
+    private async _handleChatMessage(message: string, style: string, webview: vscode.Webview) {
+        // ALWAYS update personality to match current UI selection (no conditions)
+        const currentStyle = style || 'cyberpunk';
+        this.chatService.updatePersonalityStyle(currentStyle);
+
+        // Get current friendship percentage from FriendshipService (single source of truth)
+        const friendshipPercentage = this.friendshipService.getTotalPercentage();
+
+        await this.chatService.handleChatMessage(message, webview, friendshipPercentage);
+    }
+
+    private _showRecentActivityNotification(webview: vscode.Webview) {
+        // Only show once and only if there's existing friendship data from recent activity
+        console.log('[Extension] Checking recent activity notification. hasShown:', this.hasShownRecentActivityNotification);
+
+        if (this.hasShownRecentActivityNotification) {
+            console.log('[Extension] Recent activity notification already shown, skipping');
+            return;
+        }
+
+        const currentPercentage = this.friendshipService.getTotalPercentage();
+        console.log('[Extension] Current friendship percentage:', currentPercentage);
+
+        if (currentPercentage > 0) {
+            console.log('[Extension] Showing recent activity notification for', currentPercentage + '%');
+            this.hasShownRecentActivityNotification = true;
+            webview.postMessage({
+                command: 'showRecentActivityNotification',
+                data: {
+                    percentage: currentPercentage,
+                    message: `Loaded ${currentPercentage}% friendship from recent Claude Code activity. Press Reset if you want to start fresh!`
+                }
+            });
+        } else {
+            console.log('[Extension] No recent activity to notify about (0%)');
+        }
     }
 
     private _sendFriendshipUpdate(webview: vscode.Webview) {
@@ -182,19 +248,22 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
 
     private _saveAvatarConfig(config: any) {
         this._context.globalState.update('claudeBuddyAvatarConfig', config);
-        console.log('Avatar config saved to globalState:', config);
+
+        // Update chat service personality style if style has changed
+        if (config && config.style) {
+            this.chatService.updatePersonalityStyle(config.style);
+        }
     }
 
     private _loadAvatarConfig(webview: vscode.Webview) {
-        const config = this._context.globalState.get('claudeBuddyAvatarConfig');
+        const config = this._context.globalState.get('claudeBuddyAvatarConfig') as any;
         if (config) {
-            console.log('Loading avatar config from globalState:', config);
+            // Ensure style defaults to cyberpunk if not set
+            config.style = config.style || 'cyberpunk';
             webview.postMessage({
                 command: 'loadAvatarConfig',
                 config: config
             });
-        } else {
-            console.log('No saved avatar config found');
         }
     }
 

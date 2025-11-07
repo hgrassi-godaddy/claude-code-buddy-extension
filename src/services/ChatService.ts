@@ -20,14 +20,14 @@ export class ChatService {
     private geminiService: GeminiService;
     private conversationHistory: ChatMessage[] = [];
 
-    constructor() {
-        this.geminiService = new GeminiService();
+    constructor(initialStyle: string = 'cyberpunk') {
+        this.geminiService = new GeminiService(initialStyle);
     }
 
     /**
      * Handle incoming chat messages from the user
      */
-    public async handleChatMessage(message: string, webview: vscode.Webview): Promise<void> {
+    public async handleChatMessage(message: string, webview: vscode.Webview, friendshipPercentage?: number): Promise<void> {
         if (!message.trim()) {
             return;
         }
@@ -47,8 +47,8 @@ export class ChatService {
                 isTyping: true
             });
 
-            // Get response from Gemini
-            const response = await this.geminiService.sendMessage(message);
+            // Get response from Gemini (pass friendship percentage for consistency)
+            const response = await this.geminiService.sendMessage(message, friendshipPercentage);
 
             // Add AI response to history
             const aiMessage: ChatMessage = {
@@ -58,16 +58,12 @@ export class ChatService {
             };
             this.conversationHistory.push(aiMessage);
 
-            // Calculate friendship metrics
-            const friendshipData = this.geminiService.analyzeConversationSentiment();
-
             // Simulate typing delay for more natural interaction
             const delay = Math.min(1000 + response.length * 15, 2500);
             setTimeout(() => {
                 webview.postMessage({
                     command: 'receiveMessage',
-                    message: response,
-                    friendshipData: friendshipData
+                    message: response
                 });
 
                 webview.postMessage({
@@ -92,10 +88,15 @@ export class ChatService {
     }
 
     /**
-     * Get current friendship metrics
+     * Get current friendship metrics (deprecated - use FriendshipService instead)
      */
     public getFriendshipMetrics() {
-        return this.geminiService.analyzeConversationSentiment();
+        // This method is deprecated - FriendshipService is now the single source of truth
+        return {
+            friendshipScore: 0,
+            totalInteractions: 0,
+            positiveInteractions: 0
+        };
     }
 
     /**
@@ -126,5 +127,12 @@ export class ChatService {
      */
     public getConversationHistory(): ChatMessage[] {
         return [...this.conversationHistory];
+    }
+
+    /**
+     * Update the personality style
+     */
+    public updatePersonalityStyle(newStyle: string): void {
+        this.geminiService.updatePersonalityStyle(newStyle);
     }
 }

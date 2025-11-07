@@ -21,6 +21,7 @@ export class PromptHistoryService {
     private friendshipService?: FriendshipService;
     private processedPrompts = new Set<string>(); // Track processed prompts to avoid duplicate friendship points
     private lastProcessedTimestamp: number = Date.now(); // Track timestamp of last processed prompt for efficiency - start from current time
+    private trackingEnabled: boolean = false; // Only enable tracking after user's first interaction to avoid processing old prompts
 
     constructor(friendshipService?: FriendshipService, notificationsFilePath?: string) {
         this.logPath = path.join(
@@ -42,7 +43,7 @@ export class PromptHistoryService {
 
         console.log('[PromptHistoryService] Initialized with friendship tracking:', !!friendshipService);
         console.log('[PromptHistoryService] Notifications path:', this.notificationsPath);
-        console.log('[PromptHistoryService] Will only track NEW prompts from now on (ignoring existing prompts)');
+        console.log('[PromptHistoryService] Tracking DISABLED initially - will enable after first user interaction');
         console.log('[PromptHistoryService] Starting from timestamp:', new Date(this.lastProcessedTimestamp).toISOString());
 
         // Ensure directory structure exists
@@ -81,6 +82,104 @@ export class PromptHistoryService {
         } catch (error: any) {
             console.log('[PromptHistoryService] ❌ Could not create directory structure:', error.message);
             console.log('[PromptHistoryService] This is non-fatal - extension will work once Claude Code hooks are set up');
+        }
+    }
+
+    /**
+     * Enable friendship tracking for new prompts
+     * Call this after the user's first interaction to prevent processing old prompts
+     */
+    public enableTracking(): void {
+        this.trackingEnabled = true;
+        console.log('[PromptHistoryService] Tracking ENABLED - will now track new Claude Code prompts for friendship');
+    }
+
+    /**
+     * Process recent Claude Code activity immediately on extension load
+     * This ensures friendship percentage reflects recent activity right away
+     */
+    public async loadRecentActivityForFriendship(): Promise<void> {
+        if (!this.friendshipService) {
+            console.log('[PromptHistoryService] No friendship service available');
+            return;
+        }
+
+        console.log('[PromptHistoryService] Starting to load recent activity for friendship...');
+        const initialPercentage = this.friendshipService.getTotalPercentage();
+        console.log('[PromptHistoryService] Initial friendship percentage:', initialPercentage);
+
+        try {
+            // Process recent prompts (last hour) for initial friendship calculation
+            await this.processRecentPromptsForFriendship();
+            await this.processRecentNotificationsForFriendship();
+
+            const finalPercentage = this.friendshipService.getTotalPercentage();
+            console.log('[PromptHistoryService] Final friendship percentage after processing:', finalPercentage);
+            console.log('[PromptHistoryService] Processed recent Claude Code activity for initial friendship calculation');
+        } catch (error) {
+            console.log('[PromptHistoryService] Error processing recent activity:', error);
+        }
+    }
+
+    private async processRecentPromptsForFriendship(): Promise<void> {
+        // Process prompts from the last hour to show recent activity
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        console.log('[PromptHistoryService] Looking for prompts after:', new Date(oneHourAgo));
+
+        try {
+            // Check if file exists and is readable
+            await fs.access(this.logPath, fs.constants.R_OK);
+            console.log('[PromptHistoryService] Claude Code log file found:', this.logPath);
+
+            // Read entire file
+            const content = await fs.readFile(this.logPath, 'utf-8');
+            const lines = content.split('\n').filter(line => line.trim());
+            console.log('[PromptHistoryService] Found', lines.length, 'log entries to check');
+
+            let processedCount = 0;
+            lines.forEach((line: string) => {
+                try {
+                    const parsed = JSON.parse(line);
+                    const promptTime = new Date(parsed.timestamp).getTime();
+
+                    if (parsed.timestamp && parsed.prompt && promptTime > oneHourAgo) {
+                        console.log('[PromptHistoryService] Found recent prompt:', parsed.prompt.substring(0, 50));
+                        const promptKey = `${parsed.timestamp}_${parsed.prompt.substring(0, 50)}`;
+                        if (!this.processedPrompts.has(promptKey)) {
+                            this.friendshipService?.incrementCategory(
+                                'prompts',
+                                1,
+                                `Recent Claude Code prompt: "${parsed.prompt.substring(0, 50)}${parsed.prompt.length > 50 ? '...' : ''}"`
+                            );
+                            this.processedPrompts.add(promptKey);
+                            processedCount++;
+                        }
+                    }
+                } catch (parseError) {
+                    // Skip malformed entries
+                }
+            });
+            console.log('[PromptHistoryService] Processed', processedCount, 'recent prompts for friendship');
+        } catch (error: any) {
+            console.log('[PromptHistoryService] Could not read prompts log file:', error.message || error);
+        }
+    }
+
+    private async processRecentNotificationsForFriendship(): Promise<void> {
+        // Process notifications from the last hour
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+
+        try {
+            const content = await fs.readFile(this.notificationsPath, 'utf8');
+            const lines = content.split('\n').filter(line => line.trim());
+
+            lines.forEach(line => {
+                // Simple timestamp check - if the file was modified recently, consider it recent activity
+                const description = `Recent Claude Code notification: ${line.substring(0, 50)}${line.length > 50 ? '...' : ''}`;
+                this.friendshipService?.incrementCategory('notifications', 1, description);
+            });
+        } catch (error) {
+            // Notifications file might not exist, which is fine
         }
     }
 
@@ -272,8 +371,8 @@ export class PromptHistoryService {
             // have already been processed to avoid double-counting
             const notificationCount = lines.length;
 
-            if (notificationCount > 0) {
-                // Get the last notification and parse the message
+            if (notificationCount > 0 && this.trackingEnabled && this.friendshipService) {
+                // Only increment friendship for notifications if tracking is enabled
                 const lastLine = lines[lines.length - 1];
 
                 try {
@@ -372,14 +471,17 @@ export class PromptHistoryService {
 
                     // Check if we've already processed this prompt (extra safety check)
                     if (!this.processedPrompts.has(promptKey)) {
-                        // This is a new prompt! Increment friendship
-                        this.friendshipService.incrementCategory(
-                            'prompts',
-                            1,
-                            `Made a Claude Code prompt: "${parsed.prompt.substring(0, 50)}${parsed.prompt.length > 50 ? '...' : ''}"`
-                        );
+                        // Only increment friendship if tracking is enabled (prevents processing old prompts on fresh install)
+                        if (this.trackingEnabled && this.friendshipService) {
+                            // This is a new prompt! Increment friendship
+                            this.friendshipService.incrementCategory(
+                                'prompts',
+                                1,
+                                `Made a Claude Code prompt: "${parsed.prompt.substring(0, 50)}${parsed.prompt.length > 50 ? '...' : ''}"`
+                            );
+                        }
 
-                        // Mark this prompt as processed
+                        // Mark this prompt as processed regardless of tracking status
                         this.processedPrompts.add(promptKey);
                         newPromptsFound++;
 

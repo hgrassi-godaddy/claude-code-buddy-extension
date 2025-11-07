@@ -135,6 +135,7 @@ export class FriendshipService {
     public getFriendshipMessage(): string {
         const totalPercentage = this.getTotalPercentage();
 
+        if (totalPercentage >= 100) return "Nobody Can Stand Between Us! 💫";
         if (totalPercentage >= 90) return "Inseparable Buddies! 🌟💎";
         if (totalPercentage >= 80) return "Best Friends Forever! 🌟";
         if (totalPercentage >= 60) return "Close Friends! 💫";
@@ -168,7 +169,6 @@ export class FriendshipService {
             const stored = this.context.globalState.get<FriendshipData>(FriendshipService.STORAGE_KEY);
 
             if (stored && stored.version === FriendshipService.VERSION) {
-                console.log('[Friendship] Loaded existing data:', stored);
                 return stored;
             }
 
@@ -209,7 +209,11 @@ export class FriendshipService {
                 prompts: 0,
                 notifications: 0
             },
-            history: [],
+            history: [{
+                timestamp: now,
+                category: 'notifications',
+                description: 'Fresh install - Claude Buddy is ready! 🤖✨'
+            }],
             createdAt: now,
             lastUpdated: now
         };
@@ -222,6 +226,15 @@ export class FriendshipService {
         // For now, just recreate - future versions can implement proper migration
         console.log('[Friendship] Migration not implemented, using default data');
         return this.createDefaultData();
+    }
+
+    /**
+     * Calculate total friendship from data
+     */
+    private calculateTotalFromData(data: FriendshipData): number {
+        const { chat, prompts, notifications } = data.categories;
+        const total = chat + prompts + notifications;
+        return Math.min(total, 100);
     }
 
     /**

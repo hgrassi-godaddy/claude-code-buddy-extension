@@ -249,7 +249,8 @@
 .friendship-bar-small .friendship-progress {
     width: 0%;
     height: 100%;
-    background: var(--vscode-progressBar-foreground);
+    background: linear-gradient(90deg, #87CEEB, #4169E1); /* Light blue to royal blue gradient */
+    border-radius: 2px;
     transition: width 0.5s ease;
 }
 
