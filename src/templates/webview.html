@@ -158,6 +158,9 @@
             <div id="messages" class="messages"></div>
             <div class="input-container">
                 <textarea id="messageInput" placeholder="Message Buddy..." maxlength="500" rows="1"></textarea>
+                <button id="successSoundButton" title="Play success sound">✅</button>
+                <button id="failureSoundButton" title="Play failure sound">❌</button>
+                <button id="alertSoundButton" title="Play alert sound">🔔</button>
                 <button id="sendButton">Send</button>
             </div>
         </div>
@@ -235,6 +238,7 @@
         </div>
     </div>
 
+    <script nonce="{{nonce}}" src="{{soundServiceJs}}"></script>
     <script nonce="{{nonce}}" src="{{mainJs}}"></script>
 </body>
 </html>

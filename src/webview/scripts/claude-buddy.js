@@ -83,6 +83,9 @@
     let messagesContainer;
     let messageInput;
     let sendButton;
+    let successSoundButton;
+    let failureSoundButton;
+    let alertSoundButton;
 
     // Utility functions
     function triggerHappyAnimation() {
@@ -718,9 +721,55 @@
         }
     }
 
+    // Sound functions - delegated to SoundService
+    function playSuccessSound() {
+        if (window.SoundService) {
+            window.SoundService.playSuccessSound();
+        } else {
+            console.warn('[Webview] SoundService not available');
+        }
+    }
+
+    function playFailureSound() {
+        if (window.SoundService) {
+            window.SoundService.playFailureSound();
+        } else {
+            console.warn('[Webview] SoundService not available');
+        }
+    }
+
+    function playAlertSound() {
+        if (window.SoundService) {
+            window.SoundService.playAlertSound();
+        } else {
+            console.warn('[Webview] SoundService not available');
+        }
+    }
+
     function setupMessagingListeners() {
         if (sendButton) {
             sendButton.addEventListener('click', sendMessage);
+        }
+
+        if (successSoundButton) {
+            successSoundButton.addEventListener('click', () => {
+                playSuccessSound();
+                console.log('[Webview] Success sound button clicked');
+            });
+        }
+
+        if (failureSoundButton) {
+            failureSoundButton.addEventListener('click', () => {
+                playFailureSound();
+                console.log('[Webview] Failure sound button clicked');
+            });
+        }
+
+        if (alertSoundButton) {
+            alertSoundButton.addEventListener('click', () => {
+                playAlertSound();
+                console.log('[Webview] Alert sound button clicked');
+            });
         }
 
         if (messageInput) {
@@ -1279,11 +1328,17 @@
         messagesContainer = document.getElementById('messages');
         messageInput = document.getElementById('messageInput');
         sendButton = document.getElementById('sendButton');
+        successSoundButton = document.getElementById('successSoundButton');
+        failureSoundButton = document.getElementById('failureSoundButton');
+        alertSoundButton = document.getElementById('alertSoundButton');
 
         console.log('[Webview] Basic elements found:', {
             messagesContainer: !!messagesContainer,
             messageInput: !!messageInput,
-            sendButton: !!sendButton
+            sendButton: !!sendButton,
+            successSoundButton: !!successSoundButton,
+            failureSoundButton: !!failureSoundButton,
+            alertSoundButton: !!alertSoundButton
         });
 
         // Initialize all modules with defaults
