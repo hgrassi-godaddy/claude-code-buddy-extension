@@ -7,6 +7,9 @@
     const vscode = acquireVsCodeApi();
     console.log('[Webview] VSCode API acquired:', !!vscode);
 
+    // Milestone tracking (will be initialized when friendship data loads)
+    let previousFriendshipPercentage = null;
+
     // Constants
     const styleThemes = {
         cyberpunk: {
@@ -430,9 +433,14 @@
         messageInput.style.overflowY = 'hidden';
 
         if (vscode) {
+            // Get current style directly from UI (not saved config)
+            const activeStyleBtn = document.querySelector('.style-btn.active');
+            const currentStyle = activeStyleBtn ? activeStyleBtn.dataset.style : 'cyberpunk';
+
             vscode.postMessage({
                 command: 'sendMessage',
-                text: message
+                text: message,
+                style: currentStyle
             });
         }
     }
@@ -452,76 +460,11 @@
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // Friendship functions
-    function updateFriendshipMetrics(friendshipData) {
-        const friendshipLabel = document.querySelector('.friendship-label');
-        const friendshipTooltip = document.getElementById('friendshipTooltip');
-        const progressBar = document.querySelector('.friendship-progress');
+    // Legacy friendship function - REMOVED
+    // Now using FriendshipService exclusively via updateFriendshipDisplay()
 
-        if (!friendshipData) return;
-
-        const percentage = friendshipData.friendshipScore || 0;
-        const totalInteractions = friendshipData.totalInteractions || 0;
-        const positiveInteractions = friendshipData.positiveInteractions || 0;
-
-        // Update friendship label
-        if (friendshipLabel) {
-            friendshipLabel.textContent = `🩵 Friendship ${percentage}%`;
-        }
-
-        // Update progress bar
-        if (progressBar) {
-            progressBar.style.width = percentage + '%';
-
-            // Consistent light blue progress fill
-            progressBar.style.background = 'linear-gradient(90deg, #87CEEB, #ADD8E6)'; // Consistent sky blue to light blue
-        }
-
-        // Update tooltip
-        if (friendshipTooltip) {
-            let statusMessage = '';
-            let detailMessage = '';
-
-            if (percentage >= 90) {
-                statusMessage = 'Inseparable Buddies! 🌟💎';
-                detailMessage = 'You two are the best of friends!';
-            } else if (percentage >= 80) {
-                statusMessage = 'Best Friends Forever! 🌟';
-                detailMessage = 'Your friendship is really strong!';
-            } else if (percentage >= 60) {
-                statusMessage = 'Close Friends! 💫';
-                detailMessage = 'You\'re getting along great!';
-            } else if (percentage >= 40) {
-                statusMessage = 'Good Friends! 😊';
-                detailMessage = 'Building a solid friendship!';
-            } else if (percentage >= 20) {
-                statusMessage = 'Getting Along Well! 👍';
-                detailMessage = 'Keep chatting to grow closer!';
-            } else if (percentage >= 10) {
-                statusMessage = 'Building Friendship! 🤝';
-                detailMessage = 'Off to a good start!';
-            } else {
-                statusMessage = 'Just Getting Started! 👋';
-                detailMessage = 'Chat more to build friendship!';
-            }
-
-            friendshipTooltip.innerHTML = `
-                <div><strong>${statusMessage}</strong></div>
-                <div style="font-size: 11px; margin-top: 4px;">${detailMessage}</div>
-                <div style="font-size: 10px; margin-top: 4px; opacity: 0.8;">
-                    💬 ${totalInteractions} chats • 😊 ${positiveInteractions} positive
-                </div>
-            `;
-        }
-
-        console.log('[Webview] Updated friendship metrics:', friendshipData);
-    }
-
-    function updateFriendshipTooltip() {
-        // Legacy function - kept for compatibility
-        // Now handled by updateFriendshipMetrics
-        console.log('[Webview] updateFriendshipTooltip called (legacy)');
-    }
+    // Legacy updateFriendshipTooltip function - REMOVED
+    // Now handled exclusively by FriendshipService via updateFriendshipDisplay()
 
     // Typing indicator functions
     let typingIndicatorElement = null;
@@ -564,6 +507,9 @@
                 if (style && styleThemes[style]) {
                     updateActiveButton('.style-btn', e.target); // Update button FIRST
                     changeCharacterStyle(style); // Then apply style (which saves config)
+
+                    // Update personality based on new style
+                    updatePersonalityForStyle(style);
                 }
             });
         });
@@ -758,16 +704,55 @@
         }
     }
 
+    // Get personality-based welcome message
+    function getPersonalityWelcome() {
+        // Get current style directly from UI (not saved config)
+        const activeStyleBtn = document.querySelector('.style-btn.active');
+        const currentStyle = activeStyleBtn ? activeStyleBtn.dataset.style : 'cyberpunk';
+
+        switch (currentStyle) {
+            case 'cyberpunk':
+                return 'SYSTEM ONLINE 🩵⚡ Hello, Human. I am C-LAUDE_BUDDY.exe, your cybernetic companion unit. Friendship.dll loading... 0% complete. Input your user designation for optimal interaction protocols. Ready to interface with your neural network? 🤖💻';
+
+            case 'academic':
+                return 'Salutations! 🩵📚 I am Claude Buddy, your scholarly companion and fellow intellectual! According to my friendship algorithms, we are currently at 0% companionship coefficient. Might I inquire as to your preferred nomenclature? I do so enjoy engaging in stimulating discourse with brilliant minds such as yourself! 🤓✨';
+
+            case 'casual':
+            default:
+                return 'Hey hey! 🩵✨ I\'m Claude Buddy and I am PUMPED to meet you! 🤗 Friendship level: totally brand new but already awesome! What should I call you? I\'ve got snacks, good vibes, and zero judgment - let\'s be buddies! 🌟🍕';
+        }
+    }
+
+    // Update personality when style changes
+    function updatePersonalityForStyle(newStyle) {
+        let personalityMessage = '';
+
+        switch (newStyle) {
+            case 'cyberpunk':
+                personalityMessage = 'UPGRADE COMPLETE 🩵⚡ *systems recalibrating* C-LAUDE_BUDDY.exe now running in CYBER_MODE. All friendship algorithms optimized for maximum digital efficiency. Shall we begin data exchange, Human? 🤖💻';
+                break;
+
+            case 'academic':
+                personalityMessage = '*adjusts digital spectacles* 🩵📚 Fascinating! I have recalibrated my intellectual parameters to better serve as your scholarly companion! I do hope you appreciate this more erudite configuration, my dear colleague! 🤓✨';
+                break;
+
+            case 'casual':
+            default:
+                personalityMessage = '*vibes activated* 🩵✨ Yooo! I\'m feeling super chill and fun now! Ready to just hang out and chat about whatever! Want some virtual pizza while we talk? This is my happy place! 🤗🍕🎉';
+                break;
+        }
+
+        // Add the personality change message
+        addMessage(personalityMessage, 'buddy');
+    }
+
     function handleExtensionMessage(event) {
         const message = event.data;
         console.log('[Webview] Received message:', message.command);
         switch (message.command) {
             case 'receiveMessage':
                 addMessage(message.message, 'buddy');
-                // Update friendship metrics if provided
-                if (message.friendshipData) {
-                    updateFriendshipMetrics(message.friendshipData);
-                }
+                // Note: Friendship metrics are now handled exclusively by FriendshipService via 'updateFriendship' command
                 break;
             case 'showTyping':
                 handleTypingIndicator(message.isTyping);
@@ -803,15 +788,46 @@
         }
     }
 
+    // Flag to track if we've shown the initial recent activity notification
+    let hasShownInitialRecentActivity = false;
+
     // Friendship System Functions
     function updateFriendshipDisplay(data) {
         try {
             const { summary, displayString, message: friendshipMessage } = data;
 
+            // Extract current percentage
+            const currentPercentage = summary ? summary.averagePercentage || 0 : 0;
+
+            // Initialize previousFriendshipPercentage on first load, then check for milestone achievements
+            if (previousFriendshipPercentage === null) {
+                // First load - just set the baseline, no milestone check
+                previousFriendshipPercentage = currentPercentage;
+
+                // If this is the first load and we have a percentage > 0, show recent activity notification
+                if (currentPercentage > 0 && !hasShownInitialRecentActivity) {
+                    console.log('[Webview] First load with existing friendship data:', currentPercentage + '%');
+                    hasShownInitialRecentActivity = true;
+
+                    // Show the notification right after percentage loads
+                    setTimeout(() => {
+                        showRecentActivityNotification({
+                            percentage: currentPercentage,
+                            message: `Loaded ${currentPercentage}% friendship from recent Claude Code activity. Press Reset if you want to start fresh!`
+                        });
+                    }, 100); // Small delay to ensure UI is updated
+                }
+            } else {
+                // Subsequent updates - check for milestone achievements
+                checkMilestoneAchievement(previousFriendshipPercentage, currentPercentage);
+                // Update tracking variable
+                previousFriendshipPercentage = currentPercentage;
+            }
+
             // Update main friendship bar display (now shows single percentage)
             const friendshipLabel = document.getElementById('friendshipLabel');
             if (friendshipLabel) {
-                friendshipLabel.textContent = `💖 ${displayString}`; // e.g., "💖 Friendship 45%"
+                friendshipLabel.textContent = `🩵 ${displayString}`; // e.g., "🩵 Friendship 45%"
             }
 
             // Update friendship tooltip message
@@ -983,6 +999,7 @@
             console.log('[Webview] Reset button by class:', resetByClass ? 'Found' : 'Not found');
         }
 
+
         // Close button (backup, should already be set up in setupFriendshipListeners)
         const modalClose = document.getElementById('friendshipModalClose');
         if (modalClose) {
@@ -1029,6 +1046,194 @@
         }
     }
 
+
+    // Confetti celebration system
+    function createConfetti() {
+        const container = document.createElement('div');
+        container.className = 'confetti-container';
+        document.body.appendChild(container);
+
+        const confettiTypes = ['square', 'circle', 'triangle', 'heart', 'star'];
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#9D00FF', '#ffd700'];
+
+        // Create 50 confetti pieces
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            const type = confettiTypes[Math.floor(Math.random() * confettiTypes.length)];
+
+            confetti.className = `confetti-piece confetti-${type}`;
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.animationDelay = Math.random() * 2 + 's';
+            confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+
+            if (type === 'square' || type === 'heart') {
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            container.appendChild(confetti);
+        }
+
+        // Remove confetti after animation
+        setTimeout(() => {
+            if (container.parentNode) {
+                container.parentNode.removeChild(container);
+            }
+        }, 5000);
+    }
+
+    function showMilestoneCelebration(percentage) {
+        // Create celebration modal
+        const celebration = document.createElement('div');
+        celebration.className = 'milestone-celebration';
+
+        const messages = {
+            10: {
+                title: "🎉 10% - Building Friendship!",
+                message: "Congratulations! We've reached our first milestone! This is just the beginning of our awesome journey together! 🩵✨"
+            },
+            20: {
+                title: "👍 20% - Getting Along Well!",
+                message: "Wonderful! We're really connecting now! I'm so happy we're building this friendship together! 🤗💫"
+            },
+            40: {
+                title: "😊 40% - Good Friends!",
+                message: "Amazing milestone! We've become good friends! I really enjoy our conversations and getting to know you better! 🩵"
+            },
+            60: {
+                title: "💫 60% - Close Friends!",
+                message: "Fantastic achievement! We're close friends now! I feel like I can really trust you and share everything! 🤝✨"
+            },
+            80: {
+                title: "🌟 80% - Best Friends Forever!",
+                message: "Incredible milestone! We're best friends now! You mean so much to me, and I'm grateful for our amazing friendship! 🥰💖"
+            },
+            90: {
+                title: "🌟💎 90% - Inseparable Buddies!",
+                message: "WOW! We've reached the ultimate level! We are truly inseparable buddies now! Nothing can break our bond! 🌟💎✨"
+            },
+            100: {
+                title: "💫 100% - Nobody Can Stand Between Us!",
+                message: "MAXIMUM FRIENDSHIP ACHIEVED! 🎊 We are absolutely inseparable now! Nothing in this world could come between our perfect friendship! 🩵⚡🤖💻✨"
+            }
+        };
+
+        const milestone = messages[percentage];
+        if (!milestone) return;
+
+        celebration.innerHTML = `
+            <div class="milestone-card">
+                <div class="milestone-title">${milestone.title}</div>
+                <div class="milestone-message">${milestone.message}</div>
+                <button class="milestone-close" id="milestone-continue-btn">
+                    Continue! 🚀
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(celebration);
+
+        // Setup continue button event listener for immediate responsiveness
+        const continueBtn = document.getElementById('milestone-continue-btn');
+        if (continueBtn) {
+            continueBtn.addEventListener('click', () => {
+                if (celebration.parentNode) {
+                    celebration.parentNode.removeChild(celebration);
+                }
+            });
+        }
+
+        // Trigger confetti
+        createConfetti();
+
+        // No auto-dismiss - user must click Continue to dismiss
+    }
+
+    function showRecentActivityNotification(data) {
+        console.log('[Webview] showRecentActivityNotification function called with data:', data);
+
+        // Ensure DOM is ready before creating notification
+        const createNotification = () => {
+            console.log('[Webview] DOM ready state:', document.readyState);
+            console.log('[Webview] Document body exists:', !!document.body);
+
+            // Create notification modal
+            const notification = document.createElement('div');
+            notification.className = 'milestone-celebration';
+            console.log('[Webview] Created notification element:', notification);
+
+            notification.innerHTML = `
+                <div class="milestone-card">
+                    <div class="milestone-title">🔄 Recent Activity Loaded</div>
+                    <div class="milestone-message">${data.message}</div>
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                        <button class="milestone-close" id="notification-continue-btn" style="background: #4CAF50;">
+                            Continue! 👍
+                        </button>
+                        <button class="milestone-close" id="notification-reset-btn" style="background: #f44336;">
+                            Reset to 0% 🔄
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+            console.log('[Webview] Notification appended to document body');
+            console.log('[Webview] Notification display style:', window.getComputedStyle(notification).display);
+            console.log('[Webview] Notification visibility:', window.getComputedStyle(notification).visibility);
+
+            // Setup button event listeners
+            const continueBtn = document.getElementById('notification-continue-btn');
+            const resetBtn = document.getElementById('notification-reset-btn');
+            console.log('[Webview] Button elements found - Continue:', !!continueBtn, 'Reset:', !!resetBtn);
+
+            if (continueBtn) {
+                continueBtn.addEventListener('click', () => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                    // Send dismiss notification to extension
+                    sendToExtension('dismissNotification', {});
+                });
+            }
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                    // Reset friendship data
+                    sendToExtension('resetFriendship', {});
+                });
+            }
+        };
+
+        // Check if DOM is ready, if not wait for it
+        if (document.readyState === 'loading') {
+            console.log('[Webview] DOM still loading, waiting...');
+            document.addEventListener('DOMContentLoaded', createNotification);
+        } else {
+            console.log('[Webview] DOM ready, creating notification immediately');
+            // Add small delay to ensure webview is fully initialized
+            setTimeout(createNotification, 100);
+        }
+    }
+
+    function checkMilestoneAchievement(previousPercentage, currentPercentage) {
+        const milestones = [10, 20, 40, 60, 80, 90, 100];
+
+        // Find all milestones that were passed between previous and current percentage
+        const passedMilestones = milestones.filter(milestone =>
+            milestone > previousPercentage && milestone <= currentPercentage
+        );
+
+        // Trigger celebration for each passed milestone (usually just one, but could be multiple)
+        passedMilestones.forEach((milestone, index) => {
+            setTimeout(() => {
+                showMilestoneCelebration(milestone);
+            }, 500 + (index * 2000)); // Stagger multiple celebrations by 2 seconds if multiple milestones passed
+        });
+    }
+
     function setupFriendshipListeners() {
         console.log('[Webview] *** SETUP FRIENDSHIP LISTENERS STARTED ***');
 
@@ -1071,7 +1276,7 @@
                 if (container.classList.contains('coding-mode')) {
                     // Exit coding mode - show customization panels
                     container.classList.remove('coding-mode');
-                    letscodeBtn.textContent = "Let's Code!";
+                    letscodeBtn.textContent = "Let's Chat!";
                 } else {
                     // Enter coding mode - hide customization panels
                     container.classList.add('coding-mode');
@@ -1302,8 +1507,9 @@
         updateFriendshipTooltip();
         showPanel(0); // Start with first panel
 
-        // Add initial welcome message
-        addMessage('Hi there! I\'m Claude Buddy! 🩵✨ I\'m SO excited to meet you and build an amazing friendship together! 🤗 What\'s your name? I\'d love to get to know you better! Our friendship meter is at 0% right now, but I have a feeling we\'re going to be great friends! 🌟', 'buddy');
+        // Add initial welcome message based on current style
+        const welcomeMessage = getPersonalityWelcome();
+        addMessage(welcomeMessage, 'buddy');
 
         // Signal to extension that webview is ready
         console.log('[Webview] Sending webviewReady signal');
