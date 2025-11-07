@@ -422,6 +422,10 @@
         addMessage(message, 'user');
         messageInput.value = '';
 
+        // Reset to original small size after sending
+        messageInput.style.height = '34px';
+        messageInput.style.overflowY = 'hidden';
+
         if (vscode) {
             vscode.postMessage({
                 command: 'sendMessage',
@@ -446,43 +450,105 @@
     }
 
     // Friendship functions
-    function updateFriendshipTooltip() {
-        const friendshipTooltip = document.getElementById('friendshipTooltip');
+    function updateFriendshipMetrics(friendshipData) {
         const friendshipLabel = document.querySelector('.friendship-label');
+        const friendshipTooltip = document.getElementById('friendshipTooltip');
+        const progressBar = document.querySelector('.friendship-progress');
 
-        if (!friendshipTooltip || !friendshipLabel) return;
+        if (!friendshipData) return;
 
-        // Extract percentage from label text (e.g., "💖 Friendship 75%" -> 75)
-        const labelText = friendshipLabel.textContent;
-        console.log('Label text:', labelText); // Debug log
-        const percentageMatch = labelText.match(/(\d+)%/);
-        const percentage = percentageMatch ? parseInt(percentageMatch[1]) : 0;
-        console.log('Extracted percentage:', percentage); // Debug log
+        const percentage = friendshipData.friendshipScore || 0;
+        const totalInteractions = friendshipData.totalInteractions || 0;
+        const positiveInteractions = friendshipData.positiveInteractions || 0;
 
-        let statusMessage = '';
-
-        if (percentage >= 90) {
-            statusMessage = 'Inseparable Buddies! 🌟💎';
-        } else if (percentage >= 80) {
-            statusMessage = 'Best Friends Forever! 🌟';
-        } else if (percentage >= 60) {
-            statusMessage = 'Close Friends! 💫';
-        } else if (percentage >= 40) {
-            statusMessage = 'Good Friends! 😊';
-        } else if (percentage >= 20) {
-            statusMessage = 'Getting Along Well! 👍';
-        } else if (percentage >= 10) {
-            statusMessage = 'Building Friendship! 🤝';
-        } else {
-            statusMessage = 'Just Getting Started! 👋';
+        // Update friendship label
+        if (friendshipLabel) {
+            friendshipLabel.textContent = `🩵 Friendship ${percentage}%`;
         }
 
-        friendshipTooltip.textContent = statusMessage;
-
-        // Update the progress bar width to match the percentage
-        const progressBar = document.querySelector('.friendship-progress');
+        // Update progress bar
         if (progressBar) {
             progressBar.style.width = percentage + '%';
+
+            // Consistent light blue progress fill
+            progressBar.style.background = 'linear-gradient(90deg, #87CEEB, #ADD8E6)'; // Consistent sky blue to light blue
+        }
+
+        // Update tooltip
+        if (friendshipTooltip) {
+            let statusMessage = '';
+            let detailMessage = '';
+
+            if (percentage >= 90) {
+                statusMessage = 'Inseparable Buddies! 🌟💎';
+                detailMessage = 'You two are the best of friends!';
+            } else if (percentage >= 80) {
+                statusMessage = 'Best Friends Forever! 🌟';
+                detailMessage = 'Your friendship is really strong!';
+            } else if (percentage >= 60) {
+                statusMessage = 'Close Friends! 💫';
+                detailMessage = 'You\'re getting along great!';
+            } else if (percentage >= 40) {
+                statusMessage = 'Good Friends! 😊';
+                detailMessage = 'Building a solid friendship!';
+            } else if (percentage >= 20) {
+                statusMessage = 'Getting Along Well! 👍';
+                detailMessage = 'Keep chatting to grow closer!';
+            } else if (percentage >= 10) {
+                statusMessage = 'Building Friendship! 🤝';
+                detailMessage = 'Off to a good start!';
+            } else {
+                statusMessage = 'Just Getting Started! 👋';
+                detailMessage = 'Chat more to build friendship!';
+            }
+
+            friendshipTooltip.innerHTML = `
+                <div><strong>${statusMessage}</strong></div>
+                <div style="font-size: 11px; margin-top: 4px;">${detailMessage}</div>
+                <div style="font-size: 10px; margin-top: 4px; opacity: 0.8;">
+                    💬 ${totalInteractions} chats • 😊 ${positiveInteractions} positive
+                </div>
+            `;
+        }
+
+        console.log('[Webview] Updated friendship metrics:', friendshipData);
+    }
+
+    function updateFriendshipTooltip() {
+        // Legacy function - kept for compatibility
+        // Now handled by updateFriendshipMetrics
+        console.log('[Webview] updateFriendshipTooltip called (legacy)');
+    }
+
+    // Typing indicator functions
+    let typingIndicatorElement = null;
+
+    function handleTypingIndicator(isTyping) {
+        if (!messagesContainer) return;
+
+        if (isTyping) {
+            // Show typing indicator
+            if (!typingIndicatorElement) {
+                typingIndicatorElement = document.createElement('div');
+                typingIndicatorElement.className = 'message buddy-message typing-indicator';
+                typingIndicatorElement.innerHTML = `
+                    <div class="message-bubble typing-bubble">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                `;
+                messagesContainer.appendChild(typingIndicatorElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        } else {
+            // Hide typing indicator
+            if (typingIndicatorElement) {
+                typingIndicatorElement.remove();
+                typingIndicatorElement = null;
+            }
         }
     }
 
@@ -655,15 +721,38 @@
         }
 
         if (messageInput) {
+            // Handle Enter key (send on Enter, new line on Shift+Enter when expanded)
             messageInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault(); // Prevent new line
                     sendMessage();
                 }
             });
+
+            // Auto-resize based on character count
+            messageInput.addEventListener('input', autoResizeTextarea);
         }
 
         // Listen for messages from the extension
         window.addEventListener('message', handleExtensionMessage);
+    }
+
+    // Auto-resize textarea function - only expand after 25 characters
+    function autoResizeTextarea() {
+        if (messageInput) {
+            const textLength = messageInput.value.length;
+
+            if (textLength >= 25) {
+                // Expand to fit content and enable scrolling
+                messageInput.style.height = 'auto';
+                messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+                messageInput.style.overflowY = 'auto';
+            } else {
+                // Keep at original single-line size
+                messageInput.style.height = '34px';
+                messageInput.style.overflowY = 'hidden';
+            }
+        }
     }
 
     function handleExtensionMessage(event) {
@@ -672,6 +761,13 @@
         switch (message.command) {
             case 'receiveMessage':
                 addMessage(message.message, 'buddy');
+                // Update friendship metrics if provided
+                if (message.friendshipData) {
+                    updateFriendshipMetrics(message.friendshipData);
+                }
+                break;
+            case 'showTyping':
+                handleTypingIndicator(message.isTyping);
                 break;
             case 'loadConversation':
                 // Clear existing messages first to avoid duplicates
@@ -931,7 +1027,7 @@
         showPanel(0); // Start with first panel
 
         // Add initial welcome message
-        addMessage('Hey there! I\'m your coding buddy! 🤖\\nReady to tackle some code together?', 'buddy');
+        addMessage('Hi there! I\'m Claude Buddy! 🩵✨ I\'m SO excited to meet you and build an amazing friendship together! 🤗 What\'s your name? I\'d love to get to know you better! Our friendship meter is at 0% right now, but I have a feeling we\'re going to be great friends! 🌟', 'buddy');
 
         // Signal to extension that webview is ready
         console.log('[Webview] Sending webviewReady signal');
