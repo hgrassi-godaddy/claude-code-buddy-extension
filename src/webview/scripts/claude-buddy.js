@@ -86,18 +86,38 @@
     let messagesContainer;
     let messageInput;
     let sendButton;
-    let successSoundButton;
-    let failureSoundButton;
-    let alertSoundButton;
 
     // Utility functions
     function triggerHappyAnimation() {
         const cyborgBody = document.querySelector('.cyborg-body');
+        console.log('[Animation] triggerHappyAnimation - found element:', !!cyborgBody);
         if (cyborgBody) {
             cyborgBody.style.animation = 'none';
             setTimeout(() => {
                 cyborgBody.style.animation = 'cyborgFloat 3s ease-in-out infinite';
+                console.log('[Animation] Happy animation restarted');
             }, 10);
+        }
+    }
+
+    function triggerJumpAnimation() {
+        const cyborgBody = document.querySelector('.cyborg-body');
+        console.log('[Animation] triggerJumpAnimation - found element:', !!cyborgBody);
+        if (cyborgBody) {
+            // Clear any existing animations and add jump
+            cyborgBody.style.animation = 'none';
+            cyborgBody.classList.remove('buddy-jump');
+
+            setTimeout(() => {
+                cyborgBody.classList.add('buddy-jump');
+                console.log('[Animation] Jump animation added');
+            }, 10);
+
+            setTimeout(() => {
+                cyborgBody.classList.remove('buddy-jump');
+                cyborgBody.style.animation = 'cyborgFloat 3s ease-in-out infinite';
+                console.log('[Animation] Jump animation removed, float restored');
+            }, 1200); // Match new animation duration
         }
     }
 
@@ -238,9 +258,6 @@
             status.textContent = statusTexts[styleName] || 'Ready to help!';
         }
 
-        // Trigger animation restart
-        triggerHappyAnimation();
-        
         if (!skipSave) saveAvatarConfig();
     }
 
@@ -249,7 +266,6 @@
         if (!color) return;
 
         setRootProperty('--skin-color', color);
-        triggerHappyAnimation();
         saveAvatarConfig();
     }
 
@@ -258,14 +274,12 @@
         if (!color) return;
 
         setRootProperty('--hair-color', color);
-        triggerHappyAnimation();
         saveAvatarConfig();
     }
 
     function changeHairStyle(styleNumber, skipSave = false) {
         hideAllElements('.hair-style');
         showElement(`hair-style-${styleNumber}`);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
@@ -274,76 +288,64 @@
         if (!color) return;
 
         setRootProperty('--eye-color', color);
-        triggerHappyAnimation();
         saveAvatarConfig();
     }
 
     // Color picker functions for hex values
     function changeSkinColorHex(hexColor, skipSave = false) {
         setRootProperty('--skin-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeHairColorHex(hexColor, skipSave = false) {
         setRootProperty('--hair-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeEyeColorHex(hexColor, skipSave = false) {
         setRootProperty('--eye-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeAccessoryColorHex(hexColor, skipSave = false) {
         setRootProperty('--accessory-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     // Individual accessory color functions
     function changeGlassesColorHex(hexColor, skipSave = false) {
         setRootProperty('--glasses-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeEarringsColorHex(hexColor, skipSave = false) {
         setRootProperty('--earrings-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeCatColorHex(hexColor, skipSave = false) {
         setRootProperty('--cat-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeDogColorHex(hexColor, skipSave = false) {
         setRootProperty('--dog-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     // Clothing color functions
     function changeTopColorHex(hexColor, skipSave = false) {
         setRootProperty('--top-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeBottomColorHex(hexColor, skipSave = false) {
         setRootProperty('--bottom-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeShoeColorHex(hexColor, skipSave = false) {
         setRootProperty('--shoe-color', hexColor);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
@@ -351,21 +353,18 @@
     function changeTopStyle(styleName, skipSave = false) {
         hideAllElements('.top-style');
         showElement(`top-${styleName}`);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeBottomStyle(styleName, skipSave = false) {
         hideAllElements('.bottom-style');
         showElement(`bottom-${styleName}`);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
     function changeShoeStyle(styleName, skipSave = false) {
         hideAllElements('.shoe-style');
         showElement(`shoe-${styleName}`);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
@@ -399,7 +398,6 @@
             }
         }
 
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
@@ -410,14 +408,11 @@
         if (accessoryName !== 'none') {
             showElement(`accessory-${accessoryName}`);
         }
-
-        triggerHappyAnimation();
     }
 
     function changeExpression(expressionName, skipSave = false) {
         hideAllElements('.expression');
         showElement(`mouth-${expressionName}`);
-        triggerHappyAnimation();
         if (!skipSave) saveAvatarConfig();
     }
 
@@ -697,26 +692,6 @@
             sendButton.addEventListener('click', sendMessage);
         }
 
-        if (successSoundButton) {
-            successSoundButton.addEventListener('click', () => {
-                playSuccessSound();
-                console.log('[Webview] Success sound button clicked');
-            });
-        }
-
-        if (failureSoundButton) {
-            failureSoundButton.addEventListener('click', () => {
-                playFailureSound();
-                console.log('[Webview] Failure sound button clicked');
-            });
-        }
-
-        if (alertSoundButton) {
-            alertSoundButton.addEventListener('click', () => {
-                playAlertSound();
-                console.log('[Webview] Alert sound button clicked');
-            });
-        }
 
         if (messageInput) {
             // Handle Enter key (send on Enter, new line on Shift+Enter when expanded)
@@ -834,6 +809,11 @@
                 console.log('[Webview] updateFriendship received:', message.data);
                 updateFriendshipDisplay(message.data);
                 break;
+            case 'claudeCodeReady':
+                // Show Claude Code ready notification with jump animation
+                console.log('[Webview] Claude Code ready notification received');
+                showClaudeCodeReadyNotification();
+                break;
         }
     }
 
@@ -862,7 +842,7 @@
                     setTimeout(() => {
                         showRecentActivityNotification({
                             percentage: currentPercentage,
-                            message: `Loaded ${currentPercentage}% friendship from recent Claude Code activity. Press Reset if you want to start fresh!`
+                            message: `Loaded ${currentPercentage}% friendship from recent Claude Buddy activity. Press Reset if you want to start fresh!`
                         });
                     }, 100); // Small delay to ensure UI is updated
                 }
@@ -1131,6 +1111,11 @@
     }
 
     function showMilestoneCelebration(percentage) {
+        // Play alert sound for milestone celebration
+        if (window.SoundService) {
+            SoundService.playAlertSound();
+        }
+
         // Create celebration modal
         const celebration = document.createElement('div');
         celebration.className = 'milestone-celebration';
@@ -1205,6 +1190,11 @@
             console.log('[Webview] DOM ready state:', document.readyState);
             console.log('[Webview] Document body exists:', !!document.body);
 
+            // Play notification sound for recent activity loaded
+            if (window.SoundService) {
+                SoundService.playNotificationSound();
+            }
+
             // Create notification modal
             const notification = document.createElement('div');
             notification.className = 'milestone-celebration';
@@ -1267,6 +1257,230 @@
         }
     }
 
+    function showClaudeCodeReadyNotification() {
+        // Play success sound and trigger jump animation
+        if (window.SoundService) {
+            SoundService.playSuccessSound();
+        }
+        triggerJumpAnimation();
+
+        // Find the buddy avatar container to position the chat bubble
+        const buddyAvatar = document.querySelector('.buddy-avatar');
+        const cyborgContainer = document.querySelector('.cyborg-container');
+
+        if (!buddyAvatar || !cyborgContainer) {
+            console.log('[Notification] Could not find buddy avatar for chat bubble');
+            return;
+        }
+
+        // Create chat bubble positioned near Claude Buddy
+        const chatBubble = document.createElement('div');
+        chatBubble.className = 'claude-ready-bubble';
+        chatBubble.innerHTML = `
+            <div class="bubble-content">
+                🤖 Claude Code is calling!
+            </div>
+            <div class="bubble-arrow"></div>
+        `;
+
+        // Add styles if not exists
+        if (!document.querySelector('#claude-bubble-styles')) {
+            const style = document.createElement('style');
+            style.id = 'claude-bubble-styles';
+            style.textContent = `
+                .claude-ready-bubble {
+                    position: absolute;
+                    top: 15px;
+                    left: -100px;
+                    background: #9D00FF; /* Neon Purple Background */
+                    color: #FFFFFF; /* White font */
+                    padding: 6px 10px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    z-index: 10000;
+                    box-shadow: 0 3px 12px rgba(157, 0, 255, 0.4);
+                    animation: bubblePopIn 3s ease-in-out forwards;
+                    white-space: nowrap;
+                    border: 1px solid #00FF41; /* Neon Green Border */
+                }
+
+                .bubble-content {
+                    position: relative;
+                    z-index: 2;
+                }
+
+                .bubble-arrow {
+                    position: absolute;
+                    right: -6px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 0;
+                    height: 0;
+                    border-top: 6px solid transparent;
+                    border-bottom: 6px solid transparent;
+                    border-left: 6px solid #00FF41; /* Neon Green Arrow */
+                }
+
+                @keyframes bubblePopIn {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0.3) translateY(10px);
+                    }
+                    15% {
+                        opacity: 1;
+                        transform: scale(1.15) translateY(-5px);
+                    }
+                    25% {
+                        transform: scale(1) translateY(0px);
+                    }
+                    85% {
+                        opacity: 1;
+                        transform: scale(1) translateY(0px);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: scale(0.8) translateY(-10px);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Position relative to cyborg container
+        cyborgContainer.style.position = 'relative';
+        cyborgContainer.appendChild(chatBubble);
+
+        // Remove after animation completes
+        setTimeout(() => {
+            if (chatBubble.parentNode) {
+                chatBubble.parentNode.removeChild(chatBubble);
+            }
+        }, 3000);
+    }
+
+    function showCustomizationCompleteMessage() {
+        // Play alert sound and trigger jump animation
+        if (window.SoundService) {
+            SoundService.playAlertSound();
+        }
+        triggerJumpAnimation();
+
+        // Find the buddy avatar container to position the chat bubble
+        const buddyAvatar = document.querySelector('.buddy-avatar');
+        const cyborgContainer = document.querySelector('.cyborg-container');
+
+        if (!buddyAvatar || !cyborgContainer) {
+            console.log('[Customization] Could not find buddy avatar for chat bubble');
+            return;
+        }
+
+        // Create chat bubble with heart and enthusiastic message
+        const chatBubble = document.createElement('div');
+        chatBubble.className = 'customization-complete-bubble';
+        chatBubble.innerHTML = `
+            <div class="bubble-content">
+                🤍 Thanks for the fit!
+            </div>
+            <div class="bubble-arrow"></div>
+        `;
+
+        // Add styles if not exists
+        if (!document.querySelector('#customization-bubble-styles')) {
+            const style = document.createElement('style');
+            style.id = 'customization-bubble-styles';
+            style.textContent = `
+                .customization-complete-bubble {
+                    position: absolute;
+                    top: 15px;
+                    left: -100px;
+                    background: linear-gradient(135deg, #FF69B4, #FF1493);
+                    color: white;
+                    padding: 6px 10px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    z-index: 10000;
+                    box-shadow: 0 3px 12px rgba(255, 105, 180, 0.4);
+                    animation: customizationBubblePop 4s ease-in-out forwards;
+                    white-space: nowrap;
+                    border: 1px solid #FF91A4;
+                    transform-origin: center right;
+                }
+
+                .customization-complete-bubble .bubble-content {
+                    position: relative;
+                    z-index: 2;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .customization-complete-bubble .bubble-arrow {
+                    position: absolute;
+                    top: 50%;
+                    right: -4px;
+                    width: 0;
+                    height: 0;
+                    border-top: 4px solid transparent;
+                    border-bottom: 4px solid transparent;
+                    border-left: 4px solid #FF1493;
+                    transform: translateY(-50%);
+                }
+
+                .customization-complete-bubble::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    right: -25px;
+                    width: 22px;
+                    height: 1px;
+                    background: #FF1493;
+                    transform: translateY(-50%) rotate(25deg);
+                    transform-origin: left center;
+                    opacity: 0.7;
+                }
+
+                @keyframes customizationBubblePop {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0.2) translateX(-30px) rotate(-10deg);
+                    }
+                    20% {
+                        opacity: 1;
+                        transform: scale(1.3) translateX(10px) rotate(5deg);
+                    }
+                    40% {
+                        transform: scale(1.1) translateX(5px) rotate(-2deg);
+                    }
+                    60% {
+                        transform: scale(1.05) translateX(0px) rotate(1deg);
+                    }
+                    80% {
+                        opacity: 1;
+                        transform: scale(1) translateX(0px) rotate(0deg);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: scale(0.8) translateX(-20px) rotate(0deg);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Position relative to cyborg container
+        cyborgContainer.style.position = 'relative';
+        cyborgContainer.appendChild(chatBubble);
+
+        // Remove after animation completes
+        setTimeout(() => {
+            if (chatBubble.parentNode) {
+                chatBubble.parentNode.removeChild(chatBubble);
+            }
+        }, 4000);
+    }
+
     function checkMilestoneAchievement(previousPercentage, currentPercentage) {
         const milestones = [10, 20, 40, 60, 80, 90, 100];
 
@@ -1279,7 +1493,7 @@
         passedMilestones.forEach((milestone, index) => {
             setTimeout(() => {
                 showMilestoneCelebration(milestone);
-            }, 500 + (index * 2000)); // Stagger multiple celebrations by 2 seconds if multiple milestones passed
+            }, 2000 + (index * 2000)); // 2-second delay to prevent conflicts with Claude Code notifications
         });
     }
 
@@ -1330,6 +1544,9 @@
                     // Enter coding mode - hide customization panels
                     container.classList.add('coding-mode');
                     letscodeBtn.textContent = "Let's Customize!";
+
+                    // Show enthusiastic customization complete message
+                    showCustomizationCompleteMessage();
                 }
             });
         }
@@ -1533,17 +1750,11 @@
         messagesContainer = document.getElementById('messages');
         messageInput = document.getElementById('messageInput');
         sendButton = document.getElementById('sendButton');
-        successSoundButton = document.getElementById('successSoundButton');
-        failureSoundButton = document.getElementById('failureSoundButton');
-        alertSoundButton = document.getElementById('alertSoundButton');
 
         console.log('[Webview] Basic elements found:', {
             messagesContainer: !!messagesContainer,
             messageInput: !!messageInput,
-            sendButton: !!sendButton,
-            successSoundButton: !!successSoundButton,
-            failureSoundButton: !!failureSoundButton,
-            alertSoundButton: !!alertSoundButton
+            sendButton: !!sendButton
         });
 
         // Initialize all modules with defaults

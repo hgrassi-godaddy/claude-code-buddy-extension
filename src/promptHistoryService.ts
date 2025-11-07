@@ -95,7 +95,7 @@ export class PromptHistoryService {
     }
 
     /**
-     * Process recent Claude Code activity immediately on extension load
+     * Process recent Claude Buddy activity immediately on extension load
      * This ensures friendship percentage reflects recent activity right away
      */
     public async loadRecentActivityForFriendship(): Promise<void> {
@@ -115,7 +115,7 @@ export class PromptHistoryService {
 
             const finalPercentage = this.friendshipService.getTotalPercentage();
             console.log('[PromptHistoryService] Final friendship percentage after processing:', finalPercentage);
-            console.log('[PromptHistoryService] Processed recent Claude Code activity for initial friendship calculation');
+            console.log('[PromptHistoryService] Processed recent Claude Buddy activity for initial friendship calculation');
         } catch (error) {
             console.log('[PromptHistoryService] Error processing recent activity:', error);
         }
@@ -315,11 +315,19 @@ export class PromptHistoryService {
                     const notificationsDir = path.dirname(this.notificationsPath);
                     const notificationsFilename = path.basename(this.notificationsPath);
 
-                    this.notificationsWatcher = fsSync.watch(notificationsDir, { persistent: false }, (eventType: string, filename: string | null) => {
+                    this.notificationsWatcher = fsSync.watch(notificationsDir, { persistent: false }, async (eventType: string, filename: string | null) => {
                         if (filename === notificationsFilename && eventType === 'change') {
-                            this.handleNotificationChange();
-                            // Trigger UI update after processing notification
-                            this.debounceReload();
+                            console.log('[PromptHistoryService] Notifications file changed, processing...');
+                            // Wait for notification processing to complete before triggering UI update
+                            await this.handleNotificationChange();
+                            console.log('[PromptHistoryService] Notification processing complete, triggering UI update immediately');
+
+                            // Trigger UI update IMMEDIATELY after processing notification (no debounce delay)
+                            if (this.onPromptUpdated) {
+                                const prompts = await this.getRecentPrompts();
+                                this.onPromptUpdated(prompts);
+                                console.log('[PromptHistoryService] UI callback triggered immediately for notification');
+                            }
                         }
                     });
 
@@ -375,6 +383,9 @@ export class PromptHistoryService {
                 // Only increment friendship for notifications if tracking is enabled
                 const lastLine = lines[lines.length - 1];
 
+                const previousPercentage = this.friendshipService.getTotalPercentage();
+                console.log('[PromptHistoryService] Processing notification - Previous percentage:', previousPercentage);
+
                 try {
                     // Parse the notification line: [timestamp] JSON_data
                     const match = lastLine.match(/^\[(.*?)\]\s+(.+)$/);
@@ -398,6 +409,9 @@ export class PromptHistoryService {
                     const description = `Received Claude Code notification: ${lastLine.substring(0, 50)}${lastLine.length > 50 ? '...' : ''}`;
                     this.friendshipService.incrementCategory('notifications', 1, description);
                 }
+
+                const newPercentage = this.friendshipService.getTotalPercentage();
+                console.log('[PromptHistoryService] Notification processed - New percentage:', newPercentage, 'Increased:', newPercentage > previousPercentage);
             }
 
         } catch (error: any) {
@@ -419,17 +433,25 @@ export class PromptHistoryService {
 
         this.debounceTimer = setTimeout(async () => {
             try {
+                console.log('[PromptHistoryService] Debounced reload starting...');
+
                 // Check for new prompts and update friendship before reloading
                 await this.checkForNewPromptsAndUpdateFriendship();
 
+                console.log('[PromptHistoryService] Friendship updated, now triggering UI callback...');
+
                 const prompts = await this.getRecentPrompts();
                 if (this.onPromptUpdated) {
+                    // Call the UI update callback immediately after friendship processing
+                    // This ensures the UI can detect the recent activity we just processed
                     this.onPromptUpdated(prompts);
+                } else {
+                    console.log('[PromptHistoryService] No onPromptUpdated callback registered');
                 }
             } catch (error) {
                 console.log('Failed to reload prompts:', error);
             }
-        }, 500); // Wait 500ms after last change
+        }, 100); // Reduced debounce time from 500ms to 100ms for faster response
     }
 
     /**

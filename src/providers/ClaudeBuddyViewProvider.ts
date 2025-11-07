@@ -11,6 +11,7 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
     private friendshipService: FriendshipService;
     private _context: vscode.ExtensionContext;
     private hasShownRecentActivityNotification: boolean = false;
+    private lastKnownFriendshipPercentage: number = 0;
 
     constructor(private readonly _extensionUri: vscode.Uri, context: vscode.ExtensionContext) {
         this._context = context;
@@ -81,7 +82,7 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
                         const currentVersion = '0.0.1';
                         this._context.globalState.update('claudeBuddyVersion', currentVersion);
 
-                        // Process recent Claude Code activity for initial friendship display
+                        // Process recent Claude Buddy activity for initial friendship display
                         this.promptHistory.loadRecentActivityForFriendship().then(() => {
                             console.log('[Extension] Recent activity processed, sending friendship update...');
 
@@ -135,13 +136,38 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         // - Friendship tracking for new prompts
         // But it no longer updates the chat interface
 
+        // Initialize the last known percentage
+        this.lastKnownFriendshipPercentage = this.friendshipService.getTotalPercentage();
+
         // Start watching for file changes (for friendship tracking) - RE-ENABLED
         this.promptHistory.startWatching((prompts) => {
             // No longer load prompts as chat messages, but we still need the watcher
             // for friendship tracking of new prompts
             console.log('[ClaudeBuddyViewProvider] Prompt file changed, friendship tracking active');
 
-            // Send updated friendship data to webview
+            // Simple logic: Show "Claude Code is calling!" for any recent Claude Code activity
+            const hasRecentActivity = this.friendshipService.hasRecentActivity(10000); // 10 seconds window
+            const lastActivity = this.friendshipService.getLastActivity();
+
+            // Check if the recent activity is from Claude Code notifications ONLY (not prompts)
+            const isClaudeCodeActivity = lastActivity && (lastActivity.category === 'notifications');
+
+            console.log('[ClaudeBuddyViewProvider] Activity check - Has recent:', hasRecentActivity, 'Last activity:', lastActivity ? `${lastActivity.category}: ${lastActivity.description}` : 'none');
+            console.log('[ClaudeBuddyViewProvider] Is Claude Code activity:', isClaudeCodeActivity);
+
+            // Show notification if there's recent Claude Code notifications ONLY (not prompts)
+            if (hasRecentActivity && isClaudeCodeActivity) {
+                console.log(`[ClaudeBuddyViewProvider] ✅ Showing "Claude Code is calling!" immediately - Recent ${lastActivity.category} activity detected`);
+
+                // Show Claude Code notification immediately (no delay)
+                webviewView.webview.postMessage({
+                    command: 'claudeCodeReady'
+                });
+            } else {
+                console.log(`[ClaudeBuddyViewProvider] ❌ No notification - Recent activity: ${hasRecentActivity}, Claude Code activity: ${isClaudeCodeActivity}`);
+            }
+
+            // Always send updated friendship data to webview
             this._sendFriendshipUpdate(webviewView.webview);
         });
     }
@@ -176,7 +202,7 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
                 command: 'showRecentActivityNotification',
                 data: {
                     percentage: currentPercentage,
-                    message: `Loaded ${currentPercentage}% friendship from recent Claude Code activity. Press Reset if you want to start fresh!`
+                    message: `Loaded ${currentPercentage}% friendship from recent Claude Buddy activity. Press Reset if you want to start fresh!`
                 }
             });
         } else {
