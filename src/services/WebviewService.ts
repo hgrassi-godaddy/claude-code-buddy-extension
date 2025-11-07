@@ -15,6 +15,7 @@ export interface WebviewAssetUris {
     navigationCss: vscode.Uri;
     animationsCss: vscode.Uri;
     friendshipCss: vscode.Uri;
+    soundServiceJs: vscode.Uri;
     mainJs: vscode.Uri;
 }
 
@@ -51,6 +52,7 @@ export class WebviewService {
             navigationCss: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, ...stylesPath, 'navigation.css')),
             animationsCss: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, ...stylesPath, 'animations.css')),
             friendshipCss: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, ...stylesPath, 'friendship.css')),
+            soundServiceJs: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, ...scriptsPath, 'soundService.js')),
             mainJs: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, ...scriptsPath, 'claude-buddy.js'))
         };
     }
@@ -98,6 +100,7 @@ export class WebviewService {
             navigationCss: assetUris.navigationCss.toString(),
             animationsCss: assetUris.animationsCss.toString(),
             friendshipCss: assetUris.friendshipCss.toString(),
+            soundServiceJs: assetUris.soundServiceJs.toString(),
             mainJs: assetUris.mainJs.toString(),
             avatarSvg: avatarSvg
         });
@@ -169,6 +172,7 @@ export class WebviewService {
             'src/webview/styles/chat.css',
             'src/webview/styles/navigation.css',
             'src/webview/styles/animations.css',
+            'src/webview/scripts/soundService.js',
             'src/webview/scripts/claude-buddy.js'
         ];
 

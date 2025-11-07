@@ -123,6 +123,69 @@ For active development and testing of the extension:
 2. **Press F5** to launch Extension Development Host
 3. **Test in the new VS Code window**
 
+## Claude Code Hooks Setup 🔗
+
+To enable full friendship tracking integration with Claude Code CLI, you need to set up two hooks that will log your interactions:
+
+### **Prerequisites**
+- **Claude Code CLI** installed and configured
+- **jq** command-line JSON processor (`brew install jq` on macOS)
+
+### **Required Hooks Installation**
+
+Follow these step-by-step instructions to set up the hooks through Claude Code:
+
+#### **1. User Prompt Hook**
+1. **Open Claude Code**
+2. **Run `/hooks`**
+3. **Select `UserPromptSubmit`**
+4. **Select `Add new hook`**
+5. **In the command field, enter:**
+   ```
+   jq -r '"[\(now | strftime("%Y-%m-%d %H:%M:%S"))] \(.)"' >> ~/.claude/hook-logs/user-prompts-log.txt
+   ```
+6. **Select User settings**
+
+#### **2. Notification Hook**
+1. **Run `/hooks`** again
+2. **Select `Notification`**
+3. **Select `Add new hook`**
+4. **In the command field, enter:**
+   ```
+   jq -r '"[\(now | strftime("%Y-%m-%d %H:%M:%S"))] \(.)"' >> ~/.claude/hook-logs/notifications.txt
+   ```
+5. **Select User settings**
+
+### **Verify Hooks Installation**
+```bash
+# Check that hooks are installed correctly
+/hooks list
+```
+
+You should see both `UserPromptSubmit` and `Notification` hooks listed.
+
+### **Automatic Setup**
+The Claude Buddy extension will automatically create the required directory structure:
+
+```
+~/.claude/
+├── hook-logs/
+│   ├── user-prompts-log.txt    # Your Claude Code prompts (auto-created)
+│   └── notifications.txt       # Claude Code notifications (auto-created)
+```
+
+**✅ What happens automatically:**
+- Directory `~/.claude/hook-logs/` is created if it doesn't exist
+- Empty log files are initialized (won't overwrite existing data)
+- Console messages confirm successful setup
+
+### **What This Enables**
+- **🎯 Prompt Tracking**: Every Claude Code prompt increases friendship by 1%
+- **🔔 Notification Tracking**: Claude Code notifications add friendship points
+- **📊 Real-time Updates**: Friendship bar updates immediately without refreshing
+- **📈 Progress History**: View detailed friendship progression and recent activity in the modal
+- **🚀 Zero Manual Setup**: Extension handles all file/directory creation automatically
+
 ## Usage 💬
 
 - **Start Chatting**: Type messages in the input field

@@ -45,6 +45,44 @@ export class PromptHistoryService {
         console.log('[PromptHistoryService] Notifications path:', this.notificationsPath);
         console.log('[PromptHistoryService] Tracking DISABLED initially - will enable after first user interaction');
         console.log('[PromptHistoryService] Starting from timestamp:', new Date(this.lastProcessedTimestamp).toISOString());
+
+        // Ensure directory structure exists
+        this.ensureDirectoryStructure().catch(error => {
+            console.log('[PromptHistoryService] Directory creation failed (non-fatal):', error.message);
+        });
+    }
+
+    /**
+     * Ensure that the required directory structure exists for Claude Code integration
+     * Creates ~/.claude/hook-logs/ directory and initializes log files if needed
+     */
+    private async ensureDirectoryStructure(): Promise<void> {
+        try {
+            const hookLogsDir = path.dirname(this.logPath);
+
+            // Create ~/.claude/hook-logs/ directory if it doesn't exist
+            await fs.mkdir(hookLogsDir, { recursive: true });
+            console.log('[PromptHistoryService] ✅ Created directory structure:', hookLogsDir);
+
+            // Create empty log files if they don't exist (using append mode to avoid overwriting)
+            try {
+                await fs.writeFile(this.logPath, '', { flag: 'a' });
+                console.log('[PromptHistoryService] ✅ Ensured user-prompts-log.txt exists');
+            } catch (error: any) {
+                console.log('[PromptHistoryService] Could not create user-prompts-log.txt:', error.message);
+            }
+
+            try {
+                await fs.writeFile(this.notificationsPath, '', { flag: 'a' });
+                console.log('[PromptHistoryService] ✅ Ensured notifications.txt exists');
+            } catch (error: any) {
+                console.log('[PromptHistoryService] Could not create notifications.txt:', error.message);
+            }
+
+        } catch (error: any) {
+            console.log('[PromptHistoryService] ❌ Could not create directory structure:', error.message);
+            console.log('[PromptHistoryService] This is non-fatal - extension will work once Claude Code hooks are set up');
+        }
     }
 
     /**
@@ -280,6 +318,8 @@ export class PromptHistoryService {
                     this.notificationsWatcher = fsSync.watch(notificationsDir, { persistent: false }, (eventType: string, filename: string | null) => {
                         if (filename === notificationsFilename && eventType === 'change') {
                             this.handleNotificationChange();
+                            // Trigger UI update after processing notification
+                            this.debounceReload();
                         }
                     });
 
@@ -334,9 +374,30 @@ export class PromptHistoryService {
             if (notificationCount > 0 && this.trackingEnabled && this.friendshipService) {
                 // Only increment friendship for notifications if tracking is enabled
                 const lastLine = lines[lines.length - 1];
-                const description = `Received Claude Code notification: ${lastLine.substring(0, 50)}${lastLine.length > 50 ? '...' : ''}`;
 
-                this.friendshipService.incrementCategory('notifications', 1, description);
+                try {
+                    // Parse the notification line: [timestamp] JSON_data
+                    const match = lastLine.match(/^\[(.*?)\]\s+(.+)$/);
+                    console.log('****** Notification line match:', match);
+                    if (match) {
+                        const jsonData = match[2];
+                        const data = JSON.parse(jsonData);
+
+                        // Extract the actual notification message
+                        const notificationMessage = data.message || 'Unknown notification';
+                        const description = `Received Claude Code notification: ${notificationMessage}`;
+
+                        this.friendshipService.incrementCategory('notifications', 1, description);
+                    } else {
+                        // Fallback to old method if parsing fails
+                        const description = `Received Claude Code notification`;
+                        this.friendshipService.incrementCategory('notifications', 1, description);
+                    }
+                } catch (parseError) {
+                    // Fallback to old method if JSON parsing fails
+                    const description = `Received Claude Code notification: ${lastLine.substring(0, 50)}${lastLine.length > 50 ? '...' : ''}`;
+                    this.friendshipService.incrementCategory('notifications', 1, description);
+                }
             }
 
         } catch (error: any) {
