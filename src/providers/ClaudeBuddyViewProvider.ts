@@ -64,8 +64,8 @@ export class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private _handleChatMessage(message: string, webview: vscode.Webview) {
-        this.chatService.handleChatMessage(message, webview);
+    private async _handleChatMessage(message: string, webview: vscode.Webview) {
+        await this.chatService.handleChatMessage(message, webview);
     }
 
     private async _loadPromptsAsMessages(webview: vscode.Webview) {

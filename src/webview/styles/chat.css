@@ -62,6 +62,13 @@
     background: var(--vscode-input-background);
     color: var(--vscode-foreground);
     font-family: inherit;
+    resize: none;
+    height: 34px; /* Fixed height to start small */
+    max-height: 120px;
+    overflow-y: hidden; /* Start with no scroll */
+    line-height: 1.2; /* Tighter line height */
+    vertical-align: top; /* Remove extra space */
+    box-sizing: border-box; /* Include padding in height */
 }
 
 #sendButton {
@@ -75,4 +82,53 @@
 
 #sendButton:hover {
     opacity: 0.9;
+}
+
+/* Typing indicator styles */
+.typing-indicator {
+    justify-content: flex-start;
+}
+
+.typing-bubble {
+    background: var(--vscode-input-background) !important;
+    border: 1px solid var(--vscode-input-border) !important;
+    padding: 12px 16px !important;
+}
+
+.typing-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--vscode-foreground);
+    opacity: 0.4;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.typing-dots span:nth-child(3) {
+    animation-delay: 0s;
+}
+
+@keyframes typing {
+    0%, 80%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
 }

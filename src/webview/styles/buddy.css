@@ -241,7 +241,7 @@
 .friendship-bar-small {
     flex: 1;
     height: 4px;
-    background: var(--vscode-progressBar-background);
+    background: #BF00FF; /* Bright neon purple background */
     border-radius: 2px;
     overflow: hidden;
 }
