@@ -45,6 +45,22 @@
           "when": "true"
         }
       ]
+    },
+    "configuration": {
+      "title": "Claude Buddy",
+      "properties": {
+        "claudeBuddy.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Google Gemini API key for Claude Buddy conversations. Get one free at https://aistudio.google.com/app/apikey",
+          "markdownDescription": "Your Google Gemini API key for Claude Buddy conversations. Get one free at [Google AI Studio](https://aistudio.google.com/app/apikey)"
+        },
+        "claudeBuddy.saveConversationHistory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to save conversation history for friendship tracking"
+        }
+      }
     }
   },
   "scripts": {
