@@ -26,9 +26,29 @@ export class FriendshipService {
         points: number,
         description: string
     ): void {
-        // Don't increment if already at max
+        // Always add to history, even if at max points (for activity tracking)
+        const historyEntry: FriendshipHistoryEntry = {
+            timestamp: Date.now(),
+            category,
+            description
+        };
+
+        this.data.history.unshift(historyEntry);
+
+        // Check if already at max for point tracking
         if (this.data.categories[category] >= FriendshipService.MAX_POINTS_PER_CATEGORY) {
-            console.log(`[Friendship] Category ${category} already at max (${FriendshipService.MAX_POINTS_PER_CATEGORY})`);
+            console.log(`[Friendship] Category ${category} already at max (${FriendshipService.MAX_POINTS_PER_CATEGORY}), but still tracking activity`);
+
+            // Keep only the last MAX_HISTORY_ENTRIES
+            if (this.data.history.length > FriendshipService.MAX_HISTORY_ENTRIES) {
+                this.data.history = this.data.history.slice(0, FriendshipService.MAX_HISTORY_ENTRIES);
+            }
+
+            // Update metadata and save the data to persist the history entry
+            this.data.lastUpdated = Date.now();
+            this.saveData();
+
+            console.log(`[Friendship] Activity tracked at max level - Category: ${category}, Description: ${description}, Timestamp: ${new Date(historyEntry.timestamp).toISOString()}`);
             return;
         }
 
@@ -40,15 +60,6 @@ export class FriendshipService {
         );
 
         const actualPointsGained = this.data.categories[category] - oldPoints;
-
-        // Add to history
-        const historyEntry: FriendshipHistoryEntry = {
-            timestamp: Date.now(),
-            category,
-            description
-        };
-
-        this.data.history.unshift(historyEntry);
 
         // Keep only the last MAX_HISTORY_ENTRIES
         if (this.data.history.length > FriendshipService.MAX_HISTORY_ENTRIES) {
@@ -235,6 +246,31 @@ export class FriendshipService {
         const { chat, prompts, notifications } = data.categories;
         const total = chat + prompts + notifications;
         return Math.min(total, 100);
+    }
+
+    /**
+     * Check if there has been recent activity (for notifications past 100%)
+     */
+    public hasRecentActivity(withinMilliseconds: number = 5000): boolean {
+        if (this.data.history.length === 0) {
+            console.log('[Friendship] hasRecentActivity: No history entries');
+            return false;
+        }
+
+        const mostRecentActivity = this.data.history[0];
+        const timeSinceActivity = Date.now() - mostRecentActivity.timestamp;
+        const hasRecent = timeSinceActivity <= withinMilliseconds;
+
+        console.log(`[Friendship] hasRecentActivity: Most recent activity was ${timeSinceActivity}ms ago (${mostRecentActivity.category}: ${mostRecentActivity.description}), within ${withinMilliseconds}ms? ${hasRecent}`);
+
+        return hasRecent;
+    }
+
+    /**
+     * Get the most recent activity entry
+     */
+    public getLastActivity(): FriendshipHistoryEntry | null {
+        return this.data.history.length > 0 ? this.data.history[0] : null;
     }
 
     /**
