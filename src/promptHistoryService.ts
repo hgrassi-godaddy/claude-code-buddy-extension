@@ -3,60 +3,47 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
-import { ReplyWatcherService } from './services/ReplyWatcherService';
+import { FriendshipService } from './services/FriendshipService';
 
 export interface PromptEntry {
     timestamp: string;
     prompt: string;
     sessionId: string;
     displayTime: string;
-    transcriptPath?: string;              // NEW: Path to transcript file
-    assistantReply?: AssistantReply;      // NEW: Latest assistant response
-}
-
-export interface AssistantReply {
-    content: string;                       // Text content (combined if multiple text blocks)
-    timestamp: string;
-    displayTime: string;
-    uuid: string;                          // For debugging/tracking
-}
-
-// Internal structure for transcript parsing
-interface TranscriptEntry {
-    type: string;
-    uuid: string;
-    parentUuid: string | null;
-    timestamp: string;
-    message?: {
-        role: string;
-        type?: string;
-        content?: string | Array<{
-            type: string;
-            text?: string;
-            // ... other fields like tool_use, thinking
-        }>;
-    };
 }
 
 export class PromptHistoryService {
     private logPath: string;
+    private notificationsPath: string;
     private watcher?: fsSync.FSWatcher;
+    private notificationsWatcher?: fsSync.FSWatcher;
     private onPromptUpdated?: (prompts: PromptEntry[]) => void;
-    private replyWatcher: ReplyWatcherService;
-    private transcriptCache = new Map<string, {
-        content: TranscriptEntry[];
-        timestamp: number;
-    }>();
-    private replyCache = new Map<string, AssistantReply>(); // Cache for found replies to prevent reprocessing
+    private friendshipService?: FriendshipService;
+    private processedPrompts = new Set<string>(); // Track processed prompts to avoid duplicate friendship points
+    private lastProcessedTimestamp: number = Date.now(); // Track timestamp of last processed prompt for efficiency - start from current time
 
-    constructor() {
+    constructor(friendshipService?: FriendshipService, notificationsFilePath?: string) {
         this.logPath = path.join(
             os.homedir(),
             '.claude',
             'hook-logs',
             'user-prompts-log.txt'
         );
-        this.replyWatcher = new ReplyWatcherService();
+
+        // Default notifications path (can be overridden)
+        this.notificationsPath = notificationsFilePath || path.join(
+            os.homedir(),
+            '.claude',
+            'hook-logs',
+            'notifications.txt'  // Default assumption - user will specify actual path
+        );
+
+        this.friendshipService = friendshipService;
+
+        console.log('[PromptHistoryService] Initialized with friendship tracking:', !!friendshipService);
+        console.log('[PromptHistoryService] Notifications path:', this.notificationsPath);
+        console.log('[PromptHistoryService] Will only track NEW prompts from now on (ignoring existing prompts)');
+        console.log('[PromptHistoryService] Starting from timestamp:', new Date(this.lastProcessedTimestamp).toISOString());
     }
 
     /**
@@ -81,56 +68,12 @@ export class PromptHistoryService {
                 const parsed = this.parseLine(line);
                 if (parsed) {
                     prompts.push(parsed);
+                    // Note: Friendship increment moved to file watcher to only count new prompts
                 }
             }
 
-            // Get last N prompts
-            const recentPrompts = prompts.slice(-limit);
-
-            // Load assistant replies for each prompt
-            const promptsWithReplies = await Promise.all(
-                recentPrompts.map(async (prompt) => {
-                    // Create cache key for this prompt
-                    const cacheKey = `${prompt.sessionId}-${prompt.timestamp}-${prompt.prompt.substring(0, 100)}`;
-
-                    // Check if we already have a cached reply for this prompt
-                    const cachedReply = this.replyCache.get(cacheKey);
-                    if (cachedReply) {
-                        console.log(`[InitialLoad] 🚀 Using cached reply for: ${prompt.prompt.substring(0, 30)}`);
-                        return {
-                            ...prompt,
-                            assistantReply: cachedReply
-                        };
-                    }
-
-                    console.log(`[InitialLoad] Attempting to load reply for prompt: ${prompt.prompt.substring(0, 50)}`);
-                    const reply = await this.loadAssistantReply(prompt);
-
-                    if (reply) {
-                        console.log(`[InitialLoad] ✅ Found reply immediately for: ${prompt.prompt.substring(0, 30)}`);
-                        // Cache the reply to prevent reprocessing
-                        this.replyCache.set(cacheKey, reply);
-                    } else {
-                        console.log(`[InitialLoad] ❌ No reply found, starting progressive watcher for: ${prompt.prompt.substring(0, 30)}`);
-
-                        // If no reply found and we have transcript path, start watching for it
-                        if (prompt.transcriptPath) {
-                            // Start watching asynchronously (don't wait for it)
-                            this.startWatchingForReply(prompt).catch(error => {
-                                console.log('Failed to start watching for reply:', error);
-                            });
-                        }
-                    }
-
-                    return {
-                        ...prompt,
-                        assistantReply: reply || undefined
-                    };
-                })
-            );
-
-            // Return most recent first
-            return promptsWithReplies.reverse();
+            // Get last N prompts and return most recent first
+            return prompts.slice(-limit).reverse();
 
         } catch (error: any) {
             console.log('Failed to read prompt history:', error.message);
@@ -176,7 +119,6 @@ export class PromptHistoryService {
                 timestamp,
                 prompt: data.prompt.trim(),
                 sessionId: data.session_id || 'unknown',
-                transcriptPath: data.transcript_path || undefined,
                 displayTime
             };
 
@@ -230,6 +172,25 @@ export class PromptHistoryService {
 
             console.log('Started watching prompt history file');
 
+            // Also watch notifications file if friendship service is available
+            if (this.friendshipService && this.notificationsPath) {
+                try {
+                    const notificationsDir = path.dirname(this.notificationsPath);
+                    const notificationsFilename = path.basename(this.notificationsPath);
+
+                    this.notificationsWatcher = fsSync.watch(notificationsDir, { persistent: false }, (eventType: string, filename: string | null) => {
+                        if (filename === notificationsFilename && eventType === 'change') {
+                            this.handleNotificationChange();
+                        }
+                    });
+
+                    console.log('Started watching notifications file:', this.notificationsPath);
+                } catch (error: any) {
+                    console.log('Failed to start notifications watcher:', error.message);
+                    // Continue without notifications watching
+                }
+            }
+
         } catch (error: any) {
             console.log('Failed to start file watcher:', error.message);
             // Continue without file watching
@@ -237,7 +198,7 @@ export class PromptHistoryService {
     }
 
     /**
-     * Stop watching the log file
+     * Stop watching the log file and notifications file
      */
     stopWatching(): void {
         if (this.watcher) {
@@ -246,149 +207,45 @@ export class PromptHistoryService {
             console.log('Stopped watching prompt history file');
         }
 
-        this.replyWatcher.dispose();
-    }
-
-    /**
-     * Cache a reply for a specific prompt to prevent reprocessing
-     */
-    private cacheReplyForPrompt(prompt: PromptEntry, reply: AssistantReply): void {
-        const cacheKey = `${prompt.sessionId}-${prompt.timestamp}-${prompt.prompt.substring(0, 100)}`;
-        this.replyCache.set(cacheKey, reply);
-        console.log(`[ReplyCache] Cached reply for prompt: ${prompt.prompt.substring(0, 30)}`);
-    }
-
-    /**
-     * Start watching for assistant reply to a specific prompt
-     */
-    private async startWatchingForReply(prompt: PromptEntry): Promise<void> {
-        if (!prompt.transcriptPath) {
-            return;
+        if (this.notificationsWatcher) {
+            this.notificationsWatcher.close();
+            this.notificationsWatcher = undefined;
+            console.log('Stopped watching notifications file');
         }
-
-        // Extract user UUID from prompt data by matching content in transcript
-        const userUuid = await this.extractUserUuid(prompt);
-        if (!userUuid) {
-            console.log('Cannot watch for reply - no user UUID found for prompt:', prompt.prompt.substring(0, 50));
-            return;
-        }
-
-        // Generate unique prompt ID for tracking
-        const promptId = `${prompt.sessionId}-${prompt.timestamp}`;
-
-        console.log(`Starting to watch for reply to prompt: ${promptId}, user UUID: ${userUuid}`);
-
-        this.replyWatcher.watchForReply(
-            promptId,
-            prompt.transcriptPath,
-            userUuid,
-            (foundPromptId, reply) => {
-                console.log(`Reply found for prompt ${foundPromptId}:`, reply.content.substring(0, 100));
-
-                // Cache the found reply to prevent reprocessing
-                this.cacheReplyForPrompt(prompt, reply);
-
-                // Trigger a refresh of the prompts to include the new reply
-                if (this.onPromptUpdated) {
-                    this.debounceReload();
-                }
-            }
-        );
     }
 
     /**
-     * Find the actual user message UUID by matching prompt content in transcript
-     * Uses the same logic as extractAssistantReply for consistency
+     * Handle notifications file changes - increment friendship for each new notification
      */
-    private async extractUserUuid(prompt: PromptEntry): Promise<string | null> {
-        if (!prompt.transcriptPath) {
-            return null;
+    private async handleNotificationChange(): Promise<void> {
+        if (!this.friendshipService) {
+            return;
         }
 
         try {
-            // Read the transcript file
-            const transcriptEntries = await this.getCachedTranscript(prompt.transcriptPath);
+            // Read the notifications file
+            const content = await fs.readFile(this.notificationsPath, 'utf-8');
+            const lines = content.split('\n').filter(line => line.trim());
 
-            // Use the same logic as extractAssistantReply for consistency
-            const userEntry = this.findUserEntryByContent(transcriptEntries, prompt.prompt, prompt.timestamp);
+            // For simplicity, increment by 1 for each line in the notifications file
+            // In a real implementation, you might want to track which notifications
+            // have already been processed to avoid double-counting
+            const notificationCount = lines.length;
 
-            if (userEntry) {
-                console.log(`[PromptHistory] Found matching user UUID: ${userEntry.uuid} for prompt: ${prompt.prompt.substring(0, 50)}, ${prompt.timestamp}`);
-                return userEntry.uuid;
+            if (notificationCount > 0) {
+                // Get the last notification as description
+                const lastLine = lines[lines.length - 1];
+                const description = `Received Claude Code notification: ${lastLine.substring(0, 50)}${lastLine.length > 50 ? '...' : ''}`;
+
+                this.friendshipService.incrementCategory('notifications', 1, description);
             }
 
-            console.log(`[PromptHistory] No matching user UUID found for prompt: ${prompt.prompt.substring(0, 50)}, ${prompt.timestamp}`);
-            return null;
-
-        } catch (error) {
-            console.log('Error extracting user UUID:', error);
-            return null;
+        } catch (error: any) {
+            // File might not exist yet, which is okay
+            if (error.code !== 'ENOENT') {
+                console.log('Error reading notifications file:', error.message);
+            }
         }
-    }
-
-    /**
-     * Unified method to find user entry by content matching
-     * Used by both extractAssistantReply and extractUserUuid for consistency
-     * Returns the LAST (most recent) entry that matches the prompt text
-     */
-    private findUserEntryByContent(entries: TranscriptEntry[], userPrompt: string, timestamp?: string): TranscriptEntry | null {
-        // Use substring matching (first 50 chars) like the original extractAssistantReply
-        const promptSnippet = userPrompt.substring(0, 50);
-
-        // If we have timestamp, use it to narrow down the search
-        let candidateEntries = entries.filter(entry =>
-            entry.type === 'user' &&
-            entry.message &&
-            entry.message.role === 'user' &&
-            typeof entry.message.content === 'string'
-        );
-
-        console.log(`[UserEntrySearch] Found ${candidateEntries.length} candidate user entries for prompt snippet: ${promptSnippet}, timestamp: ${timestamp || 'N/A'}`);
-        // Find ALL entries that match the content (not just the first one)
-        const matchingEntries = candidateEntries.filter(entry => {
-            const entryContent = entry.message?.content as string;
-            if (!entryContent) return false;
-
-            // Try multiple matching strategies for robustness
-            return (
-                entryContent.includes(promptSnippet) ||           // Original working logic
-                entryContent.includes(userPrompt.trim()) ||       // Full content match
-                userPrompt.trim().includes(entryContent.trim()) || // Reverse match
-                this.fuzzyMatch(entryContent, userPrompt)          // Fuzzy matching
-            );
-        });
-
-        if (matchingEntries.length === 0) {
-            console.log(`[UserEntrySearch] No matching entries found for prompt: ${promptSnippet}`);
-            return null;
-        }
-
-        console.log(`[UserEntrySearch] Found ${matchingEntries.length} matching entries for prompt: ${promptSnippet}`);
-
-        // Sort by timestamp and return the LAST (most recent) entry
-        const sortedMatches = matchingEntries.sort((a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-
-        const lastEntry = sortedMatches[sortedMatches.length - 1];
-
-        console.log(`[UserEntrySearch] Found ${matchingEntries.length} matching entries for prompt "${promptSnippet}", selected most recent: ${lastEntry.uuid} (${lastEntry.timestamp})`);
-
-        return lastEntry;
-    }
-
-    /**
-     * Simple fuzzy matching for content that might have minor differences
-     */
-    private fuzzyMatch(content1: string, content2: string): boolean {
-        // Normalize both strings (remove extra whitespace, convert to lowercase)
-        const normalize = (str: string) => str.trim().toLowerCase().replace(/\s+/g, ' ');
-
-        const norm1 = normalize(content1);
-        const norm2 = normalize(content2);
-
-        // Check if either contains the other after normalization
-        return norm1.includes(norm2) || norm2.includes(norm1);
     }
 
     /**
@@ -402,6 +259,9 @@ export class PromptHistoryService {
 
         this.debounceTimer = setTimeout(async () => {
             try {
+                // Check for new prompts and update friendship before reloading
+                await this.checkForNewPromptsAndUpdateFriendship();
+
                 const prompts = await this.getRecentPrompts();
                 if (this.onPromptUpdated) {
                     this.onPromptUpdated(prompts);
@@ -410,6 +270,107 @@ export class PromptHistoryService {
                 console.log('Failed to reload prompts:', error);
             }
         }, 500); // Wait 500ms after last change
+    }
+
+    /**
+     * Check for new prompts and increment friendship only for genuinely new ones
+     * Optimized to only read new entries instead of the entire file
+     */
+    private async checkForNewPromptsAndUpdateFriendship(): Promise<void> {
+        if (!this.friendshipService) {
+            return; // No friendship service, skip friendship tracking
+        }
+
+        try {
+            // Read the entire file content
+            const content = await fs.readFile(this.logPath, 'utf-8');
+            const lines = content.split('\n').filter(line => line.trim());
+
+            let newPromptsFound = 0;
+            let latestTimestamp = this.lastProcessedTimestamp;
+
+            // Process lines in reverse to get the most recent entries first
+            // This way we can break early once we hit processed entries
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i];
+                const parsed = this.parseLine(line);
+
+                if (parsed) {
+                    // Convert timestamp to milliseconds for comparison
+                    const entryTimestamp = new Date(parsed.timestamp).getTime();
+
+                    // Only process entries newer than our last processed timestamp
+                    if (entryTimestamp <= this.lastProcessedTimestamp) {
+                        // We've reached entries we've already processed, break early
+                        console.log(`[PromptHistoryService] Reached already processed entries at ${parsed.timestamp}, stopping`);
+                        break;
+                    }
+
+                    // Create a unique key for this prompt (sessionId + timestamp + content hash)
+                    const promptKey = `${parsed.sessionId}-${parsed.timestamp}-${this.hashString(parsed.prompt)}`;
+
+                    // Check if we've already processed this prompt (extra safety check)
+                    if (!this.processedPrompts.has(promptKey)) {
+                        // This is a new prompt! Increment friendship
+                        this.friendshipService.incrementCategory(
+                            'prompts',
+                            1,
+                            `Made a Claude Code prompt: "${parsed.prompt.substring(0, 50)}${parsed.prompt.length > 50 ? '...' : ''}"`
+                        );
+
+                        // Mark this prompt as processed
+                        this.processedPrompts.add(promptKey);
+                        newPromptsFound++;
+
+                        // Update latest timestamp
+                        if (entryTimestamp > latestTimestamp) {
+                            latestTimestamp = entryTimestamp;
+                        }
+
+                        console.log(`[PromptHistoryService] New prompt detected for friendship: ${parsed.prompt.substring(0, 30)}`);
+                    }
+                }
+            }
+
+            // Update the last processed timestamp to the latest entry we found
+            if (latestTimestamp > this.lastProcessedTimestamp) {
+                this.lastProcessedTimestamp = latestTimestamp;
+                console.log(`[PromptHistoryService] Updated last processed timestamp to: ${new Date(latestTimestamp).toISOString()}`);
+            }
+
+            if (newPromptsFound > 0) {
+                console.log(`[PromptHistoryService] Processed ${newPromptsFound} new prompts for friendship tracking`);
+            } else {
+                console.log(`[PromptHistoryService] No new prompts found since last check`);
+            }
+
+            // Clean up old processed prompts to prevent memory bloat (keep last 1000)
+            if (this.processedPrompts.size > 1000) {
+                const promptsArray = Array.from(this.processedPrompts);
+                const toKeep = promptsArray.slice(-500); // Keep last 500
+                this.processedPrompts.clear();
+                toKeep.forEach(key => this.processedPrompts.add(key));
+            }
+
+        } catch (error: any) {
+            // File might not exist yet, which is okay for new installations
+            if (error.code !== 'ENOENT') {
+                console.log('Error checking for new prompts:', error.message);
+            }
+        }
+    }
+
+    /**
+     * Simple hash function for creating unique prompt identifiers
+     */
+    private hashString(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString();
     }
 
     /**
@@ -429,256 +390,5 @@ export class PromptHistoryService {
      */
     getLogPath(): string {
         return this.logPath;
-    }
-
-    /**
-     * Read and parse transcript file with caching
-     */
-    private async getCachedTranscript(transcriptPath: string): Promise<TranscriptEntry[]> {
-        const cached = this.transcriptCache.get(transcriptPath);
-        const now = Date.now();
-
-        // Cache for 30 seconds
-        if (cached && (now - cached.timestamp) < 30000) {
-            return cached.content;
-        }
-
-        try {
-            // Read and parse transcript file
-            const content = await this.readTranscriptFile(transcriptPath);
-
-            // Cache the result
-            this.transcriptCache.set(transcriptPath, {
-                content,
-                timestamp: now
-            });
-
-            // Limit cache size to 10 files
-            if (this.transcriptCache.size > 10) {
-                const oldest = Array.from(this.transcriptCache.entries())
-                    .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
-                this.transcriptCache.delete(oldest[0]);
-            }
-
-            return content;
-
-        } catch (error) {
-            console.log('Failed to read transcript file:', transcriptPath, error);
-            return [];
-        }
-    }
-
-    /**
-     * Read and parse JSONL transcript file
-     */
-    private async readTranscriptFile(transcriptPath: string): Promise<TranscriptEntry[]> {
-        // Check if file exists and is readable
-        await fs.access(transcriptPath, fs.constants.R_OK);
-
-        // Read entire file
-        const content = await fs.readFile(transcriptPath, 'utf-8');
-
-        // Parse JSONL (each line is a JSON object)
-        const lines = content.split('\n').filter(line => line.trim());
-        const entries: TranscriptEntry[] = [];
-
-        for (const line of lines) {
-            try {
-                const entry = JSON.parse(line) as TranscriptEntry;
-                entries.push(entry);
-            } catch (error) {
-                // Skip malformed lines silently
-                continue;
-            }
-        }
-
-        return entries;
-    }
-
-    /**
-     * Extract assistant reply for a given user prompt from transcript entries
-     */
-    private async extractAssistantReply(
-        entries: TranscriptEntry[],
-        userPrompt: string
-    ): Promise<AssistantReply | null> {
-        // Use the unified user entry finding logic
-        const userEntry = this.findUserEntryByContent(entries, userPrompt);
-
-        if (!userEntry) {
-            console.log('Could not find matching user entry for prompt:', userPrompt.substring(0, 50));
-            return null;
-        }
-
-        console.log(`[AssistantReply] Found user entry UUID: ${userEntry.uuid} for prompt: ${userPrompt.substring(0, 50)}`);
-
-        // Find all assistant replies in the conversation thread
-        const assistantReplies = this.findAssistantRepliesAfter(entries, userEntry.uuid);
-
-        if (assistantReplies.length === 0) {
-            console.log('No assistant replies found for user message:', userEntry.uuid);
-            // Add more debugging info
-            console.log('Available entries in transcript:', entries.length);
-            console.log('User entry details:', {
-                uuid: userEntry.uuid,
-                timestamp: userEntry.timestamp,
-                content: typeof userEntry.message?.content === 'string'
-                    ? userEntry.message.content.substring(0, 100)
-                    : 'Non-string content'
-            });
-            return null;
-        }
-
-        console.log(`[AssistantReply] Found ${assistantReplies.length} assistant replies for user message: ${userEntry.uuid}`);
-
-        // Get the last reply with text content
-        const lastReply = assistantReplies[assistantReplies.length - 1];
-        const textContent = this.extractTextContent(lastReply);
-
-        if (!textContent) {
-            console.log('No text content found in assistant reply');
-            return null;
-        }
-
-        return {
-            content: textContent,
-            timestamp: lastReply.timestamp,
-            displayTime: this.formatTimestamp(lastReply.timestamp),
-            uuid: lastReply.uuid
-        };
-    }
-
-    /**
-     * Find all assistant replies that come after a specific user message in the conversation thread
-     * Uses the same logic as ReplyWatcherService for consistency
-     */
-    private findAssistantRepliesAfter(
-        entries: TranscriptEntry[],
-        userUuid: string
-    ): TranscriptEntry[] {
-        const replies: TranscriptEntry[] = [];
-
-        // Follow the conversation chain step by step (like ReplyWatcherService)
-        let currentUuid = userUuid;
-        let maxDepth = 20; // Prevent infinite loops
-        let depth = 0;
-        const visitedUuids = new Set<string>(); // Prevent cycles
-
-        console.log(`[ConversationChain] Starting chain walk from user UUID: ${userUuid}`);
-
-        while (currentUuid && depth < maxDepth && !visitedUuids.has(currentUuid)) {
-            visitedUuids.add(currentUuid);
-
-            // Look for entries that have this UUID as parentUuid
-            const nextEntries = entries.filter(entry =>
-                entry.parentUuid === currentUuid &&
-                entry.message?.role === 'assistant' &&
-                entry.message?.content // Must have content
-            );
-
-            console.log(`[ConversationChain] Depth ${depth}: Found ${nextEntries.length} assistant entries for parent ${currentUuid}`);
-
-            if (nextEntries.length === 0) {
-                // No more entries in the chain
-                break;
-            }
-
-            // Process all assistant entries at this level
-            let foundTextContent = false;
-            for (const nextEntry of nextEntries) {
-                const content = nextEntry.message?.content;
-                if (!content) continue;
-
-                if (Array.isArray(content)) {
-                    // Find text content in the array
-                    const hasText = content.some(item => item.type === 'text' && item.text?.trim());
-                    console.log(`[ConversationChain] Assistant entry ${nextEntry.uuid} has text content: ${hasText}`);
-
-                    if (hasText) {
-                        replies.push(nextEntry);
-                        foundTextContent = true;
-                    }
-                    // Continue following the chain from this entry regardless
-                    currentUuid = nextEntry.uuid;
-                } else if (typeof content === 'string' && content.trim()) {
-                    // Direct string content
-                    console.log(`[ConversationChain] Assistant entry ${nextEntry.uuid} has string content`);
-                    replies.push(nextEntry);
-                    foundTextContent = true;
-                    currentUuid = nextEntry.uuid;
-                } else {
-                    // No meaningful content, continue chain
-                    currentUuid = nextEntry.uuid;
-                }
-            }
-
-            // If we found text content, we can potentially stop here
-            // But continue to see if there are more replies in the chain
-            if (foundTextContent && replies.length > 0) {
-                // We found at least one good reply, but continue to get all of them
-            }
-
-            depth++;
-        }
-
-        console.log(`[ConversationChain] Chain walk completed. Found ${replies.length} assistant replies`);
-
-        // Sort by timestamp to ensure chronological order
-        return replies.sort((a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        );
-    }
-
-    /**
-     * Extract text content from transcript entry, filtering out tool_use and other non-text blocks
-     */
-    private extractTextContent(entry: TranscriptEntry): string {
-        if (!entry.message || !entry.message.content) {
-            return '';
-        }
-
-        // For assistant entries, content is an array
-        if (Array.isArray(entry.message.content)) {
-            const textBlocks = entry.message.content
-                .filter(c => c.type === 'text' && c.text)
-                .map(c => c.text!)
-                .filter(t => t.trim().length > 0);
-
-            return textBlocks.join('\n\n');
-        }
-
-        // For user entries, content is a string (but we shouldn't call this on user entries)
-        if (typeof entry.message.content === 'string') {
-            return entry.message.content;
-        }
-
-        return '';
-    }
-
-    /**
-     * Load assistant reply for a given prompt entry
-     */
-    private async loadAssistantReply(promptEntry: PromptEntry): Promise<AssistantReply | null> {
-        if (!promptEntry.transcriptPath) {
-            return null;
-        }
-
-        try {
-            // Use timeout to prevent hanging on large files
-            const timeoutPromise = new Promise<null>((resolve) =>
-                setTimeout(() => resolve(null), 5000)
-            );
-
-            const replyPromise = (async () => {
-                const entries = await this.getCachedTranscript(promptEntry.transcriptPath!);
-                return await this.extractAssistantReply(entries, promptEntry.prompt);
-            })();
-
-            return await Promise.race([replyPromise, timeoutPromise]);
-
-        } catch (error) {
-            console.log('Error loading assistant reply:', error);
-            return null;
-        }
     }
 }

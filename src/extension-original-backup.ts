@@ -94,13 +94,14 @@ class ClaudeBuddyViewProvider implements vscode.WebviewViewProvider {
                     });
 
                     // Add assistant reply if available
-                    if (prompt.assistantReply) {
-                        conversationMessages.push({
-                            type: 'assistant',
-                            text: prompt.assistantReply.content,
-                            timestamp: prompt.assistantReply.displayTime
-                        });
-                    }
+                    // Note: assistantReply functionality removed in current version
+                    // if (prompt.assistantReply) {
+                    //     conversationMessages.push({
+                    //         type: 'assistant',
+                    //         text: prompt.assistantReply.content,
+                    //         timestamp: prompt.assistantReply.displayTime
+                    //     });
+                    // }
                 });
 
                 webview.postMessage({

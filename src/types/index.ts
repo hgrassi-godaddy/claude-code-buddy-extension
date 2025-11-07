@@ -42,6 +42,42 @@ export interface FriendshipLevel {
     message: string;
 }
 
+// Enhanced Friendship System Interfaces
+export interface FriendshipCategory {
+    points: number;      // 0-100 points
+    percentage: number;  // 0-100 percentage
+    label: string;       // Category display name
+}
+
+export interface FriendshipHistoryEntry {
+    timestamp: number;
+    category: 'chat' | 'prompts' | 'notifications';
+    description: string;
+}
+
+export interface FriendshipData {
+    version: number;
+    categories: {
+        chat: number;           // 0-100 points/percentage
+        prompts: number;        // 0-100 points/percentage
+        notifications: number;  // 0-100 points/percentage
+    };
+    history: FriendshipHistoryEntry[];
+    createdAt: number;
+    lastUpdated: number;
+}
+
+export interface FriendshipSummary {
+    categories: {
+        chat: FriendshipCategory;
+        prompts: FriendshipCategory;
+        notifications: FriendshipCategory;
+    };
+    totalPoints: number;
+    averagePercentage: number;
+    recentHistory: FriendshipHistoryEntry[];
+}
+
 export interface WebviewMessage {
     command: string;
     [key: string]: any;
