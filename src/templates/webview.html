@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{chatCss}}">
     <link rel="stylesheet" href="{{navigationCss}}">
     <link rel="stylesheet" href="{{animationsCss}}">
+    <link rel="stylesheet" href="{{friendshipCss}}">
 </head>
 <body>
     <div class="container">
@@ -17,12 +18,12 @@
         <div class="buddy-section">
             <!-- Buddy Header with Friendship -->
             <div class="buddy-header">
-                <div class="friendship-compact" id="friendshipCompact">
-                    <span class="friendship-label">💖 Friendship 0%</span>
+                <div class="friendship-compact" id="friendshipCompact" style="cursor: pointer;">
+                    <span class="friendship-label" id="friendshipLabel">💖 Friendship 0%</span>
                     <div class="friendship-bar-small">
-                        <div class="friendship-progress"></div>
+                        <div class="friendship-progress" id="friendshipProgress"></div>
                     </div>
-                    <div class="friendship-tooltip" id="friendshipTooltip">Best Friends! 🌟</div>
+                    <div class="friendship-tooltip" id="friendshipTooltip">Just Getting Started! 👋</div>
                 </div>
             </div>
 
@@ -158,6 +159,78 @@
             <div class="input-container">
                 <input type="text" id="messageInput" placeholder="Message Buddy..." maxlength="500">
                 <button id="sendButton">Send</button>
+            </div>
+        </div>
+
+        <!-- Friendship Modal Overlay -->
+        <div class="friendship-modal" id="friendshipModal" style="display: none;">
+            <div class="friendship-modal-backdrop" id="friendshipModalBackdrop"></div>
+            <div class="friendship-modal-content">
+                <div class="friendship-modal-header">
+                    <h2>💖 Friendship Progress</h2>
+                    <div class="friendship-modal-header-buttons">
+                        <button class="friendship-reset-btn" id="friendshipResetBtn" title="Reset Friendship Progress">🔄</button>
+                        <button class="friendship-modal-close" id="friendshipModalClose">×</button>
+                    </div>
+                </div>
+
+                <div class="friendship-modal-body">
+                    <!-- Category Progress Bars -->
+                    <div class="friendship-categories">
+                        <div class="friendship-category">
+                            <div class="friendship-category-header">
+                                <span class="friendship-category-icon">💬</span>
+                                <span class="friendship-category-name">Chat Interactions</span>
+                                <span class="friendship-category-percent" id="chatPercent">0%</span>
+                            </div>
+                            <div class="friendship-category-bar">
+                                <div class="friendship-category-progress" id="chatProgress" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="friendship-category">
+                            <div class="friendship-category-header">
+                                <span class="friendship-category-icon">⚡</span>
+                                <span class="friendship-category-name">Claude Code Prompts</span>
+                                <span class="friendship-category-percent" id="promptsPercent">0%</span>
+                            </div>
+                            <div class="friendship-category-bar">
+                                <div class="friendship-category-progress" id="promptsProgress" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="friendship-category">
+                            <div class="friendship-category-header">
+                                <span class="friendship-category-icon">🔔</span>
+                                <span class="friendship-category-name">Notifications</span>
+                                <span class="friendship-category-percent" id="notificationsPercent">0%</span>
+                            </div>
+                            <div class="friendship-category-bar">
+                                <div class="friendship-category-progress" id="notificationsProgress" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Overall Stats -->
+                    <div class="friendship-stats">
+                        <div class="friendship-stat">
+                            <span class="friendship-stat-label">Total Points:</span>
+                            <span class="friendship-stat-value" id="totalPoints">0</span>
+                        </div>
+                        <div class="friendship-stat">
+                            <span class="friendship-stat-label">Total Level:</span>
+                            <span class="friendship-stat-value" id="averageLevel">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="friendship-activity">
+                        <h3>Recent Activity</h3>
+                        <div class="friendship-activity-list" id="recentActivity">
+                            <div class="friendship-activity-empty">No recent activity</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

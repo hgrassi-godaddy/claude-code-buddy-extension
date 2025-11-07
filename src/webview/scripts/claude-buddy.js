@@ -2,7 +2,10 @@
 (function() {
     'use strict';
 
+    console.log('[Webview] *** JAVASCRIPT FILE LOADED ***');
+
     const vscode = acquireVsCodeApi();
+    console.log('[Webview] VSCode API acquired:', !!vscode);
 
     // Constants
     const styleThemes = {
@@ -696,7 +699,270 @@
                 console.log('[Webview] loadAvatarConfig received, config:', message.config);
                 loadAvatarConfig(message.config);
                 break;
+            case 'updateFriendship':
+                // Update friendship display and modal
+                console.log('[Webview] updateFriendship received:', message.data);
+                updateFriendshipDisplay(message.data);
+                break;
         }
+    }
+
+    // Friendship System Functions
+    function updateFriendshipDisplay(data) {
+        try {
+            const { summary, displayString, message: friendshipMessage } = data;
+
+            // Update main friendship bar display (now shows single percentage)
+            const friendshipLabel = document.getElementById('friendshipLabel');
+            if (friendshipLabel) {
+                friendshipLabel.textContent = `💖 ${displayString}`; // e.g., "💖 Friendship 45%"
+            }
+
+            // Update friendship tooltip message
+            const friendshipTooltip = document.getElementById('friendshipTooltip');
+            if (friendshipTooltip) {
+                friendshipTooltip.textContent = friendshipMessage;
+            }
+
+            // Update progress bar (use total percentage)
+            const friendshipProgress = document.getElementById('friendshipProgress');
+            if (friendshipProgress) {
+                const totalPercentage = summary.averagePercentage || 0; // This is actually the total percentage now
+                friendshipProgress.style.width = `${totalPercentage}%`;
+            }
+
+            // Update modal content if modal exists
+            updateFriendshipModal(summary);
+
+            console.log('[Webview] Friendship display updated:', displayString);
+        } catch (error) {
+            console.error('[Webview] Error updating friendship display:', error);
+        }
+    }
+
+    function updateFriendshipModal(summary) {
+        // Update category percentages and progress bars
+        const categories = ['chat', 'prompts', 'notifications'];
+        const categoryData = {
+            chat: summary.categories.chat,
+            prompts: summary.categories.prompts,
+            notifications: summary.categories.notifications
+        };
+
+        categories.forEach(category => {
+            const data = categoryData[category];
+            if (data) {
+                // Update percentage text
+                const percentElement = document.getElementById(`${category}Percent`);
+                if (percentElement) {
+                    percentElement.textContent = `${data.percentage}%`;
+                }
+
+                // Update progress bar width
+                const progressElement = document.getElementById(`${category}Progress`);
+                if (progressElement) {
+                    progressElement.style.width = `${data.percentage}%`;
+                }
+            }
+        });
+
+        // Update overall stats
+        const totalPointsElement = document.getElementById('totalPoints');
+        if (totalPointsElement) {
+            totalPointsElement.textContent = summary.totalPoints || 0;
+        }
+
+        const averageLevelElement = document.getElementById('averageLevel');
+        if (averageLevelElement) {
+            averageLevelElement.textContent = `${summary.averagePercentage || 0}%`;
+        }
+
+        // Update recent activity
+        updateRecentActivity(summary.recentHistory || []);
+    }
+
+    function updateRecentActivity(history) {
+        const activityList = document.getElementById('recentActivity');
+        if (!activityList) return;
+
+        if (history.length === 0) {
+            activityList.innerHTML = '<div class="friendship-activity-empty">No recent activity</div>';
+            return;
+        }
+
+        const activityHtml = history.map(entry => {
+            const categoryIcons = {
+                chat: '💬',
+                prompts: '⚡',
+                notifications: '🔔'
+            };
+
+            const icon = categoryIcons[entry.category] || '📝';
+            const timeAgo = formatTimeAgo(entry.timestamp);
+
+            return `
+                <div class="friendship-activity-item">
+                    <span class="friendship-activity-icon">${icon}</span>
+                    <span class="friendship-activity-text">${entry.description}</span>
+                    <span class="friendship-activity-time">${timeAgo}</span>
+                </div>
+            `;
+        }).join('');
+
+        activityList.innerHTML = activityHtml;
+    }
+
+    function formatTimeAgo(timestamp) {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / (1000 * 60));
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+    }
+
+    function openFriendshipModal() {
+        const modal = document.getElementById('friendshipModal');
+        console.log('[Webview] Opening friendship modal, modal element:', modal ? 'Found' : 'Not found');
+        if (modal) {
+            modal.style.display = 'flex';
+
+            // Set up modal-specific event listeners now that modal is visible
+            setupModalEventListeners();
+
+            // Request latest friendship data
+            vscode.postMessage({
+                command: 'getFriendshipData'
+            });
+
+            console.log('[Webview] Opened friendship modal');
+        }
+    }
+
+    function setupModalEventListeners() {
+        console.log('[Webview] Setting up modal event listeners...');
+
+        // Debug: Check what elements exist in the modal
+        const modal = document.getElementById('friendshipModal');
+        console.log('[Webview] Modal element:', modal ? 'Found' : 'Not found');
+
+        if (modal) {
+            const allButtons = modal.querySelectorAll('button');
+            console.log('[Webview] Found buttons in modal:', allButtons.length);
+            allButtons.forEach((btn, index) => {
+                console.log(`[Webview] Button ${index}: id="${btn.id}", class="${btn.className}", text="${btn.textContent}"`);
+            });
+        }
+
+        // Reset button (set up each time modal opens to ensure it exists)
+        const resetBtn = document.getElementById('friendshipResetBtn');
+        console.log('[Webview] Reset button element:', resetBtn ? 'Found' : 'Not found');
+
+        if (resetBtn) {
+            console.log('[Webview] Reset button details:', {
+                id: resetBtn.id,
+                className: resetBtn.className,
+                textContent: resetBtn.textContent,
+                title: resetBtn.title
+            });
+
+            // Remove existing listener to avoid duplicates
+            resetBtn.removeEventListener('click', resetFriendship);
+            resetBtn.addEventListener('click', resetFriendship);
+            console.log('[Webview] Reset button event listener attached successfully');
+
+            // Test click programmatically to verify
+            console.log('[Webview] Testing reset button click handler...');
+        } else {
+            console.log('[Webview] ERROR: Reset button element not found in modal');
+
+            // Debug: Try to find it by class name
+            const resetByClass = document.querySelector('.friendship-reset-btn');
+            console.log('[Webview] Reset button by class:', resetByClass ? 'Found' : 'Not found');
+        }
+
+        // Close button (backup, should already be set up in setupFriendshipListeners)
+        const modalClose = document.getElementById('friendshipModalClose');
+        if (modalClose) {
+            console.log('[Webview] Close button confirmed available');
+        } else {
+            console.log('[Webview] Warning: Close button not found');
+        }
+    }
+
+    function closeFriendshipModal() {
+        const modal = document.getElementById('friendshipModal');
+        if (modal) {
+            modal.style.display = 'none';
+            console.log('[Webview] Closed friendship modal');
+        }
+    }
+
+    function resetFriendship() {
+        // Visual feedback for click detection
+        const resetBtn = document.getElementById('friendshipResetBtn');
+        if (resetBtn) {
+            resetBtn.textContent = '✅'; // Show click detected
+            setTimeout(() => {
+                resetBtn.textContent = '🔄'; // Change back
+            }, 500);
+        }
+
+        // Skip confirm dialog (blocked by VS Code webview security) and reset immediately
+        // For testing purposes, this is acceptable
+
+        // Send reset command to extension
+        vscode.postMessage({
+            command: 'resetFriendship'
+        });
+
+        // Visual feedback for reset sent
+        if (resetBtn) {
+            setTimeout(() => {
+                resetBtn.textContent = '✨'; // Show reset sent
+                setTimeout(() => {
+                    resetBtn.textContent = '🔄'; // Back to normal
+                }, 1500);
+            }, 600);
+        }
+    }
+
+    function setupFriendshipListeners() {
+        console.log('[Webview] *** SETUP FRIENDSHIP LISTENERS STARTED ***');
+
+        // Check if basic elements exist first
+        const friendshipCompact = document.getElementById('friendshipCompact');
+        console.log('[Webview] Friendship bar element:', friendshipCompact ? 'FOUND' : 'NOT FOUND');
+
+        if (friendshipCompact) {
+            friendshipCompact.addEventListener('click', function() {
+                console.log('[Webview] *** FRIENDSHIP BAR CLICKED ***');
+                openFriendshipModal();
+            });
+            console.log('[Webview] Friendship bar click listener added');
+        }
+
+        // Modal backdrop click to close modal
+        const modalBackdrop = document.getElementById('friendshipModalBackdrop');
+        console.log('[Webview] Modal backdrop element:', modalBackdrop ? 'FOUND' : 'NOT FOUND');
+        if (modalBackdrop) {
+            modalBackdrop.addEventListener('click', closeFriendshipModal);
+        }
+
+        // Modal close button click to close modal
+        const modalClose = document.getElementById('friendshipModalClose');
+        console.log('[Webview] Modal close element:', modalClose ? 'FOUND' : 'NOT FOUND');
+        if (modalClose) {
+            modalClose.addEventListener('click', closeFriendshipModal);
+        }
+
+        console.log('[Webview] *** FRIENDSHIP LISTENERS SETUP COMPLETE ***');
     }
 
     function setupLetscodeButton() {
@@ -911,19 +1177,29 @@
 
     // Main initialization function
     function initialize() {
+        console.log('[Webview] *** INITIALIZE FUNCTION CALLED ***');
+
         // Get DOM elements
         messagesContainer = document.getElementById('messages');
         messageInput = document.getElementById('messageInput');
         sendButton = document.getElementById('sendButton');
+
+        console.log('[Webview] Basic elements found:', {
+            messagesContainer: !!messagesContainer,
+            messageInput: !!messageInput,
+            sendButton: !!sendButton
+        });
 
         // Initialize all modules with defaults
         // The extension will send loadAvatarConfig message if saved config exists
         initializeCustomization();
 
         // Setup event listeners
+        console.log('[Webview] Setting up event listeners...');
         setupNavigationListeners();
         setupMessagingListeners();
         setupCustomizationListeners();
+        setupFriendshipListeners(); // This should log
         setupLetscodeButton();
 
         // Initialize UI state
@@ -938,6 +1214,8 @@
         vscode.postMessage({
             command: 'webviewReady'
         });
+
+        console.log('[Webview] *** INITIALIZE COMPLETE ***');
     }
 
     // Initialize when DOM is ready
